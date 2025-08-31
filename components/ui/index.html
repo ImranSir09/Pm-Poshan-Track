@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PM POSHAN Tracker</title>
+    <script>
+      // Apply theme immediately to prevent FOUC (Flash of Unstyled Content)
+      const theme = localStorage.getItem('pm-poshan-theme') || 'system';
+      if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+      }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <style>
+      body {
+        font-family: 'Poppins', sans-serif;
+      }
+      .page-transition-wrapper {
+        animation: page-fade-in 0.4s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
+      }
+      @keyframes page-fade-in {
+        0% {
+          opacity: 0;
+          transform: translateY(15px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animated-blob {
+        position: absolute;
+        border-radius: 50%;
+        opacity: 0.3;
+        z-index: 0;
+        filter: blur(100px);
+        will-change: transform;
+      }
+      .blob-1 {
+        width: 400px;
+        height: 400px;
+        top: -150px;
+        left: -150px;
+        animation: move 25s infinite alternate;
+      }
+      .blob-2 {
+        width: 300px;
+        height: 300px;
+        bottom: -100px;
+        right: -100px;
+        animation: move 20s infinite alternate-reverse;
+      }
+      @keyframes move {
+        from {
+          transform: translate(-100px, -50px) rotate(-90deg);
+          border-radius: 24% 76% 35% 65% / 27% 36% 64% 73%;
+        }
+        to {
+          transform: translate(100px, 100px) rotate(90deg);
+          border-radius: 76% 24% 33% 67% / 68% 55% 45% 32%;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "nanoid": "https://aistudiocdn.com/nanoid@^5.1.5",
+    "recharts": "https://aistudiocdn.com/recharts@^3.1.2",
+    "@google/genai/": "https://aistudiocdn.com/@google/genai@^0.15.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^0.15.0",
+    "jspdf-autotable": "https://aistudiocdn.com/jspdf-autotable@^5.0.2"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
