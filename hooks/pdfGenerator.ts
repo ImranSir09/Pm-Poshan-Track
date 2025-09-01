@@ -284,7 +284,13 @@ const generateNewDailyConsumptionReport = (data: AppData, month: string) => {
         
         for (let i = 1; i <= daysInMonth; i++) {
             const date = new Date(monthDate.getFullYear(), monthDate.getMonth(), i);
-            const dateString = date.toISOString().slice(0, 10);
+            
+            // Manual date string construction to avoid timezone issues
+            const yearStr = date.getFullYear();
+            const monthStr = (date.getMonth() + 1).toString().padStart(2, '0');
+            const dayStr = date.getDate().toString().padStart(2, '0');
+            const dateString = `${yearStr}-${monthStr}-${dayStr}`;
+
             const entry = summary.monthEntries.find(e => e.id === dateString);
 
             if (date.getDay() === 0) { // Sunday
@@ -338,7 +344,7 @@ const generateNewDailyConsumptionReport = (data: AppData, month: string) => {
         });
         
         doc.setFontSize(8);
-        doc.text('- Report generated on MDM MealTrack App by Bytetric -', doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 5, { align: 'center' });
+        doc.text('created from pm poshan track app by Imran Gani Mugloo Teacher Zone Vailoo', doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 5, { align: 'center' });
     });
 
     const filename = `DailyConsumption_${schoolDetails.name.replace(/\s+/g, '_')}_${month}.pdf`;
