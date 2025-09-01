@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="./vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PM POSHAN Tracker</title>
     <script>
@@ -14,84 +14,87 @@
         document.documentElement.classList.remove('dark');
       }
     </script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Poppins', 'sans-serif'],
+            },
+          },
+        },
       }
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <style>
       body {
         font-family: 'Poppins', sans-serif;
       }
-      .page-transition-wrapper {
-        animation: page-fade-in 0.4s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
-      }
-      @keyframes page-fade-in {
-        0% {
-          opacity: 0;
-          transform: translateY(15px);
-        }
-        100% {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
       .animated-blob {
-        position: absolute;
-        border-radius: 50%;
-        opacity: 0.3;
-        z-index: 0;
-        filter: blur(100px);
-        will-change: transform;
+          position: absolute;
+          border-radius: 50%;
+          opacity: 0.3;
+          filter: blur(80px);
+          animation: move 25s infinite alternate;
+          will-change: transform;
       }
       .blob-1 {
-        width: 400px;
-        height: 400px;
-        top: -150px;
-        left: -150px;
-        animation: move 25s infinite alternate;
+          width: 300px;
+          height: 300px;
+          top: -50px;
+          left: -100px;
+          animation-duration: 20s;
       }
       .blob-2 {
-        width: 300px;
-        height: 300px;
-        bottom: -100px;
-        right: -100px;
-        animation: move 20s infinite alternate-reverse;
+          width: 400px;
+          height: 400px;
+          bottom: -150px;
+          right: -150px;
+          animation-duration: 30s;
+          animation-delay: -10s;
       }
       @keyframes move {
-        from {
-          transform: translate(-100px, -50px) rotate(-90deg);
-          border-radius: 24% 76% 35% 65% / 27% 36% 64% 73%;
-        }
-        to {
-          transform: translate(100px, 100px) rotate(90deg);
-          border-radius: 76% 24% 33% 67% / 68% 55% 45% 32%;
-        }
+          from {
+              transform: translate(0, 0) scale(1);
+          }
+          to {
+              transform: translate(100px, 50px) scale(1.2);
+          }
+      }
+      @keyframes page-enter {
+          from {
+              opacity: 0;
+              transform: translateY(20px);
+          }
+          to {
+              opacity: 1;
+              transform: translateY(0);
+          }
+      }
+      .page-transition-wrapper {
+          animation: page-enter 0.5s ease-out forwards;
       }
     </style>
   <script type="importmap">
 {
   "imports": {
-    "jspdf-autotable": "https://aistudiocdn.com/jspdf-autotable@^5.0.2",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.16.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
     "react/": "https://aistudiocdn.com/react@^19.1.1/",
     "react": "https://aistudiocdn.com/react@^19.1.1",
     "recharts": "https://aistudiocdn.com/recharts@^3.1.2",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
-    "nanoid": "https://aistudiocdn.com/nanoid@^5.1.5"
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.16.0",
+    "nanoid": "https://aistudiocdn.com/nanoid@^5.1.5",
+    "jspdf-autotable": "https://aistudiocdn.com/jspdf-autotable@^5.0.2"
   }
 }
 </script>
 </head>
-  <body>
+  <body class="bg-amber-50 dark:bg-gray-900 transition-colors duration-500">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>
