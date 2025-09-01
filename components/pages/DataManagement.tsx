@@ -6,7 +6,6 @@ import { useToast } from '../../hooks/useToast';
 import Modal from '../ui/Modal';
 import { AppData } from '../../types';
 import PDFPreviewModal from '../ui/PDFPreviewModal';
-import { generatePDFReport } from '../../hooks/pdfGenerator';
 
 const DataManagement: React.FC = () => {
     const { data, importData, resetData, updateLastBackupDate } = useData();
@@ -24,12 +23,14 @@ const DataManagement: React.FC = () => {
     const handleReportExport = () => {
         setIsGenerating(true);
         // Use a timeout to allow the UI to update before the main thread is blocked by PDF generation
-        setTimeout(() => {
+        setTimeout(async () => {
             try {
+                const { generatePDFReport } = await import('../../hooks/pdfGenerator');
                 const result = generatePDFReport(reportType, data, selectedMonth);
                 setPdfPreviewData(result);
                 setIsPreviewOpen(true);
             } catch (error: any) {
+                console.error("PDF generation failed:", error);
                 showToast(error.message || 'Failed to generate PDF report.', 'error');
             } finally {
                 setIsGenerating(false);
@@ -196,6 +197,7 @@ const DataManagement: React.FC = () => {
                             <p><strong>Developer:</strong> Emraan Mugloo</p>
                             <p><strong>Contact:</strong> <a href="tel:+919149690096" className="text-amber-600 dark:text-amber-400 hover:underline">+91 9149690096</a></p>
                             <p><strong>Email:</strong> <a href="mailto:emraanmugloo123@gmail.com" className="text-amber-600 dark:text-amber-400 hover:underline">emraanmugloo123@gmail.com</a></p>
+                            <p><strong>Website:</strong> <a href="https://imransir09.github.io/Pm-Poshan-Track/" target="_blank" rel="noopener noreferrer" className="text-amber-600 dark:text-amber-400 hover:underline">Pm-Poshan-Track</a></p>
                         </div>
                     </div>
                 </Card>
