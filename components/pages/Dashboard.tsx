@@ -73,21 +73,13 @@ const Dashboard: React.FC = () => {
     }, [data.entries, displayedMonthKey]);
 
     const generateInsight = async () => {
-        const apiKey = (typeof process !== 'undefined' && process.env && process.env.API_KEY)
-            ? process.env.API_KEY
-            : undefined;
-
-        if (!apiKey) {
-            showToast('AI features are not configured.', 'error');
-            setAiInsight('Error: API key is missing. This needs to be configured by the developer.');
-            return;
-        }
-        
         setIsGeneratingInsight(true);
         setAiInsight('');
 
         try {
-            const ai = new GoogleGenAI({ apiKey: apiKey });
+            // Per platform guidelines, the API key is expected to be in `process.env.API_KEY`.
+            // The execution environment is responsible for making this variable available.
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             
             const monthName = new Date(displayedMonthKey + '-02T00:00:00').toLocaleString('default', { month: 'long' });
             const mealDays = monthlyData.filter(d => d.total > 0).length;
@@ -117,11 +109,20 @@ const Dashboard: React.FC = () => {
             
             setAiInsight(response.text);
 
-        } catch (error)
-        {
+        } catch (error) {
             console.error("AI insight generation failed:", error);
-            showToast('Failed to generate AI insight.', 'error');
-            setAiInsight('Could not generate an insight at this time. Please try again later.');
+            // If the call fails, it might be due to a missing key. Provide a helpful message.
+            if (error instanceof ReferenceError) { // Catches "process is not defined"
+                setAiInsight('AI features are not configured for this environment.');
+                showToast('AI features not available.', 'error');
+            } else if (error instanceof Error && error.message.toLowerCase().includes('api key')) {
+                setAiInsight('AI Insight generation failed. The API key might be invalid or missing.');
+                showToast('AI features are not configured correctly.', 'error');
+            }
+            else {
+                showToast('Failed to generate AI insight.', 'error');
+                setAiInsight('Could not generate an insight at this time. Please try again later.');
+            }
         } finally {
             setIsGeneratingInsight(false);
         }
