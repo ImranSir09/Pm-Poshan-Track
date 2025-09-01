@@ -23,15 +23,6 @@ const generateNewMDCFReport = (data: AppData, month: string) => {
     const monthName = monthDate.toLocaleString('default', { month: 'long' });
     const year = monthDate.getFullYear();
 
-    // Helper to draw a checkbox
-    const drawCheckbox = (x: number, y: number, label: string, checked: boolean) => {
-        doc.rect(x, y, 3, 3);
-        doc.text(label, x + 5, y + 2.5);
-        if (checked) {
-            doc.text('✔', x + 0.5, y + 2.8);
-        }
-    };
-
     // --- PAGE 1 ---
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
@@ -43,48 +34,52 @@ const generateNewMDCFReport = (data: AppData, month: string) => {
     doc.text('Instructions: Keep following registers at the time of filling the form:-', 14, 22);
     doc.text('1) Enrolment Register. 2) Account 3) Bank Account Pass book. 4) Cooking cost details etc.', 14, 26);
 
-    // 1. School Details
+    // 1. School Details - Refactored to a single, robust table
     doc.setFont('helvetica', 'bold');
     doc.text('1. School Details', 14, 33);
+
+    const typeCheckbox = (label: string, value: string, currentValue: string) => {
+        return `${currentValue === value ? '☑' : '☐'} ${label}`;
+    };
+
+    const schoolTypeMDCF = settings.schoolDetails.schoolTypeMDCF;
+    const schoolCategoryMDCF = settings.schoolDetails.schoolCategoryMDCF;
+    const totalEnrollment = settings.classRolls.reduce((sum, c) => sum + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0);
+
+    const typeContent = [
+        typeCheckbox('Government', 'Government', schoolTypeMDCF),
+        typeCheckbox('Local Body', 'Local Body', schoolTypeMDCF),
+        typeCheckbox('EGS/AIE Centers', 'EGS/AIE Centers', schoolTypeMDCF),
+        typeCheckbox('NCLP', 'NCLP', schoolTypeMDCF),
+        typeCheckbox('Madras / Maqtab', 'Madras / Maqtab', schoolTypeMDCF)
+    ].join('  ');
+
+    const categoryContent = [
+        typeCheckbox('Primary', 'Primary', schoolCategoryMDCF),
+        typeCheckbox('Upper Primary', 'Upper Primary', schoolCategoryMDCF),
+        typeCheckbox('Primary with Upper Primary', 'Primary with Upper Primary', schoolCategoryMDCF)
+    ].join('   ');
+
     doc.autoTable({
         startY: 35,
         theme: 'grid',
         body: [
-            ['Month-Year', `${monthName} ${year}`, 'UDISE Code', schoolDetails.udise, 'School Name', schoolDetails.name],
+            ['Month-Year', `${monthName} ${year}`, 'UDISE Code', schoolDetails.udise],
+            [{ content: 'School Name', styles: { fontStyle: 'bold' } }, { content: schoolDetails.name, colSpan: 3 }],
+            [{ content: 'Type', styles: { fontStyle: 'bold', valign: 'middle' } }, { content: typeContent, colSpan: 3 }],
+            [{ content: 'Category', styles: { fontStyle: 'bold', valign: 'middle' } }, { content: categoryContent, colSpan: 3 }],
+            ['State / UT', schoolDetails.state, 'District', schoolDetails.district],
+            ['Block/NP', schoolDetails.block, 'Village/Ward', schoolDetails.village],
+            ['Kitchen Type', schoolDetails.kitchenType, 'Total Enrolment', totalEnrollment.toString()],
         ],
         styles: { fontSize: 8 },
+        columnStyles: {
+            0: { cellWidth: 30 },
+            2: { cellWidth: 30 },
+        }
     });
-
-    const schoolDetailsY = doc.lastAutoTable.finalY + 2;
-    doc.rect(14, schoolDetailsY, 182, 30); // Outer box
-    doc.line(14, schoolDetailsY + 10, 196, schoolDetailsY + 10); // Horizontal line
-    doc.line(14, schoolDetailsY + 20, 196, schoolDetailsY + 20); // Horizontal line
-    doc.line(78, schoolDetailsY, 78, schoolDetailsY + 30); // Vertical line
-    doc.line(137, schoolDetailsY, 137, schoolDetailsY + 30); // Vertical line
-
-    doc.text('Type', 16, schoolDetailsY + 6);
-    drawCheckbox(30, schoolDetailsY + 4, 'Government', schoolDetails.schoolTypeMDCF === 'Government');
-    drawCheckbox(58, schoolDetailsY + 4, 'Local Body', schoolDetails.schoolTypeMDCF === 'Local Body');
-    drawCheckbox(86, schoolDetailsY + 4, 'EGS/AIE Centers', schoolDetails.schoolTypeMDCF === 'EGS/AIE Centers');
-    drawCheckbox(125, schoolDetailsY + 4, 'NCLP', schoolDetails.schoolTypeMDCF === 'NCLP');
-    drawCheckbox(145, schoolDetailsY + 4, 'Madras / Maqtab', schoolDetails.schoolTypeMDCF === 'Madras / Maqtab');
     
-    doc.text('Category', 16, schoolDetailsY + 16);
-    drawCheckbox(40, schoolDetailsY + 14, 'Primary', schoolDetails.schoolCategoryMDCF === 'Primary');
-    drawCheckbox(70, schoolDetailsY + 14, 'Upper Primary', schoolDetails.schoolCategoryMDCF === 'Upper Primary');
-    drawCheckbox(110, schoolDetailsY + 14, 'Primary with Upper Primary', schoolDetails.schoolCategoryMDCF === 'Primary with Upper Primary');
-
-    const totalEnrollment = settings.classRolls.reduce((sum, c) => sum + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0);
-    doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 20,
-        body: [
-            ['State / UT-', schoolDetails.state, 'District-', schoolDetails.district, 'Block/NP-', schoolDetails.block, 'Village/Ward-', schoolDetails.village],
-            ['Kitchen Type-', schoolDetails.kitchenType, 'Enrolment-', totalEnrollment, '', '', '', '']
-        ],
-        theme: 'plain',
-        styles: { fontSize: 8 }
-    });
-
+    let currentY = doc.lastAutoTable.finalY;
 
     // 2. Meals Availed Status
     const mealDays = entries.filter(e => e.date.startsWith(month) && e.totalPresent > 0).length;
@@ -94,9 +89,9 @@ const generateNewMDCFReport = (data: AppData, month: string) => {
     const schoolDays = daysInMonth - sundays - holidays;
 
     doc.setFont('helvetica', 'bold');
-    doc.text('2. Meals Availed Status', 14, doc.lastAutoTable.finalY + 10);
+    doc.text('2. Meals Availed Status', 14, currentY + 10);
     doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 12,
+        startY: currentY + 12,
         theme: 'grid',
         head: [['', 'Bal Vatika', 'Primary', 'Upper Primary']],
         body: [
@@ -106,14 +101,16 @@ const generateNewMDCFReport = (data: AppData, month: string) => {
         ],
         styles: { fontSize: 8 },
     });
+    
+    currentY = doc.lastAutoTable.finalY;
 
     // 3. Fund Details
     const cookHelperExpenditure = cooks.reduce((sum, cook) => sum + cook.amountPaid, 0);
     const totalClosing = cashAbstracts.balvatika.balance + cashAbstracts.primary.balance + cashAbstracts.middle.balance + cookHelperExpenditure + settings.mmeExpenditure;
     doc.setFont('helvetica', 'bold');
-    doc.text('3. Fund Details (in Rs.)', 14, doc.lastAutoTable.finalY + 10);
+    doc.text('3. Fund Details (in Rs.)', 14, currentY + 10);
     doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 12,
+        startY: currentY + 12,
         theme: 'grid',
         head: [['Component', 'Opening Balance', 'Received during the Month', 'Expenditure during the Month', 'Closing Balance']],
         body: [
@@ -126,17 +123,30 @@ const generateNewMDCFReport = (data: AppData, month: string) => {
         ],
         styles: { fontSize: 8 },
     });
+    
+    currentY = doc.lastAutoTable.finalY;
 
     // 4. Cook Cum Helper Payment Details
+    const cchBody = [];
+    for (let i = 0; i < 4; i++) {
+        const cook = cooks[i];
+        cchBody.push([
+            i + 1,
+            cook ? cook.name : '',
+            cook ? cook.gender.charAt(0) : '',
+            cook ? cook.category : '',
+            cook ? cook.paymentMode : '',
+            cook ? cook.amountPaid.toFixed(2) : ''
+        ]);
+    }
+
     doc.setFont('helvetica', 'bold');
-    doc.text('4. Cook Cum Helper Payment Details', 14, doc.lastAutoTable.finalY + 10);
+    doc.text('4. Cook Cum Helper Payment Details', 14, currentY + 10);
     doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 12,
+        startY: currentY + 12,
         theme: 'grid',
         head: [['S.No.', 'Cook Name', 'Gender (M/F)', 'Category (SC/ST/OBC/GEN)', 'Payment Mode (Cash/Bank)', 'Amount Received during month (In Rs.)']],
-        body: cooks.slice(0, 4).map((cook, i) => [
-            i + 1, cook.name, cook.gender.charAt(0), cook.category, cook.paymentMode, cook.amountPaid.toFixed(2)
-        ]),
+        body: cchBody,
         styles: { fontSize: 8 },
     });
 
@@ -163,12 +173,14 @@ const generateNewMDCFReport = (data: AppData, month: string) => {
         },
         styles: { fontSize: 8 },
     });
+    
+    currentY = doc.lastAutoTable.finalY;
 
     // 6. Children Health Status
     doc.setFont('helvetica', 'bold');
-    doc.text('6. Children Health Status', 14, doc.lastAutoTable.finalY + 10);
+    doc.text('6. Children Health Status', 14, currentY + 10);
     doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 12,
+        startY: currentY + 12,
         theme: 'grid',
         body: [
             ['No. of children from class 1 to 8 who had received 4 IFA tablets (Boys) -', healthStatus.ifaBoys],
@@ -179,6 +191,8 @@ const generateNewMDCFReport = (data: AppData, month: string) => {
         styles: { fontSize: 8 },
     });
     
+    currentY = doc.lastAutoTable.finalY;
+    
     // 7. School Inspection
     const inspectedByText = Object.entries(inspectionReport.inspectedBy)
         .filter(([, checked]) => checked)
@@ -186,9 +200,9 @@ const generateNewMDCFReport = (data: AppData, month: string) => {
         .join(', ');
 
     doc.setFont('helvetica', 'bold');
-    doc.text('7. School Inspection', 14, doc.lastAutoTable.finalY + 10);
+    doc.text('7. School Inspection', 14, currentY + 10);
     doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 12,
+        startY: currentY + 12,
         theme: 'grid',
         body: [
             ['School Inspection done during the month', `Yes [${inspectionReport.inspected ? '✔' : ' '}] No [${!inspectionReport.inspected ? '✔' : ' '}]`],
@@ -196,12 +210,14 @@ const generateNewMDCFReport = (data: AppData, month: string) => {
         ],
         styles: { fontSize: 8 },
     });
+    
+    currentY = doc.lastAutoTable.finalY;
 
     // 8. Incidents & Signatures
     doc.setFont('helvetica', 'bold');
-    doc.text('Number of Untoward Incidents Occurred', 14, doc.lastAutoTable.finalY + 10);
+    doc.text('Number of Untoward Incidents Occurred', 14, currentY + 10);
     doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 12,
+        startY: currentY + 12,
         theme: 'grid',
         body: [[inspectionReport.incidentsCount]],
         styles: { fontSize: 8 },
@@ -224,9 +240,10 @@ const generateNewDailyConsumptionReport = (data: AppData, month: string) => {
     const { schoolDetails, rates } = settings;
 
     const summary = calculateMonthlySummary(data, month);
-    const monthDate = new Date(`${month}-02T00:00:00Z`);
-    const monthName = monthDate.toLocaleString('en-IN', { month: 'long' });
-    const yearName = monthDate.toLocaleString('en-IN', { year: 'numeric' });
+    // Correctly create a UTC date to avoid timezone-off-by-one errors.
+    const monthDate = new Date(month + '-01T12:00:00Z');
+    const monthName = monthDate.toLocaleString('en-IN', { month: 'long', timeZone: 'UTC' });
+    const yearName = monthDate.toLocaleString('en-IN', { year: 'numeric', timeZone: 'UTC' });
     
     const categories: Category[] = ['balvatika', 'primary', 'middle'];
     const departmentMap = {
@@ -275,28 +292,29 @@ const generateNewDailyConsumptionReport = (data: AppData, month: string) => {
         doc.setFont('helvetica', 'italic');
         const totalCost = (rates.dalVeg[category] + rates.salt[category] + rates.oilCond[category] + rates.fuel[category]).toFixed(2);
         doc.text(
-            `Rates per student: Rice @ ${(rates.rice[category] / 1000).toFixed(3)} kg | Cooking Cost @ ₹${totalCost}`,
+            `Rates per student: Rice @ ${(rates.rice[category] / 1000).toFixed(3)} kg | Cooking Cost @ Rs.${totalCost}`,
             14, 30
         );
         
-        const head = [['S.No', 'Date', 'Roll', 'Present', 'Rice (kg)', 'Dal/Veg', 'Salt', 'Oil/Cond', 'Fuel', 'Total (₹)']];
+        const head = [['S.No', 'Date', 'Roll', 'Present', 'Rice (kg)', 'Dal/Veg', 'Salt', 'Oil/Cond', 'Fuel', 'Total (Rs.)']];
         
         const body: any[] = [];
-        const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+        const year = monthDate.getUTCFullYear();
+        const monthIndex = monthDate.getUTCMonth();
+        const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
         
         for (let i = 1; i <= daysInMonth; i++) {
-            const date = new Date(monthDate.getFullYear(), monthDate.getMonth(), i);
+            const date = new Date(Date.UTC(year, monthIndex, i));
             
-            // Manual date string construction to avoid timezone issues
-            const yearStr = date.getFullYear();
-            const monthStr = (date.getMonth() + 1).toString().padStart(2, '0');
-            const dayStr = date.getDate().toString().padStart(2, '0');
+            const yearStr = date.getUTCFullYear();
+            const monthStr = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+            const dayStr = date.getUTCDate().toString().padStart(2, '0');
             const dateString = `${yearStr}-${monthStr}-${dayStr}`;
 
             const entry = summary.monthEntries.find(e => e.id === dateString);
 
-            if (date.getDay() === 0) { // Sunday
-                body.push([i, date.toLocaleDateString('en-GB'), '', '', { content: 'Sunday', colSpan: 6, styles: { halign: 'center' } }]);
+            if (date.getUTCDay() === 0) { // Sunday
+                body.push([i, date.toLocaleDateString('en-GB', { timeZone: 'UTC' }), '', '', { content: 'Sunday', colSpan: 6, styles: { halign: 'center' } }]);
             } else if (entry) {
                 const present = entry.present[category];
                 const fgUsed = (present * rates.rice[category]) / 1000;
@@ -308,7 +326,7 @@ const generateNewDailyConsumptionReport = (data: AppData, month: string) => {
                 
                 body.push([
                     i,
-                    date.toLocaleDateString('en-GB'),
+                    date.toLocaleDateString('en-GB', { timeZone: 'UTC' }),
                     onRolls[category],
                     present,
                     present > 0 ? fgUsed.toFixed(3) : '0.000',
@@ -319,7 +337,7 @@ const generateNewDailyConsumptionReport = (data: AppData, month: string) => {
                     present > 0 ? total.toFixed(2) : '0.00',
                 ]);
             } else {
-                 body.push([i, date.toLocaleDateString('en-GB'), onRolls[category], 0, '0.000', '0.00', '0.00', '0.00', '0.00', '0.00']);
+                 body.push([i, date.toLocaleDateString('en-GB', { timeZone: 'UTC' }), onRolls[category], 0, '0.000', '0.00', '0.00', '0.00', '0.00', '0.00']);
             }
         }
         
@@ -335,11 +353,11 @@ const generateNewDailyConsumptionReport = (data: AppData, month: string) => {
         doc.autoTable({
             head: [['Abstract of Rice', 'Abstract of Cash']],
             body: [
-                [`1. Opening Balance:-   ${riceAbstract.opening.toFixed(3)} Kg`, `1. Opening Balance:-   ₹ ${cashAbstract.opening.toFixed(2)}`],
-                [`2. Quantity received:- ${riceAbstract.received.toFixed(3)} Kg`, `2. Amount received:-   ₹ ${cashAbstract.received.toFixed(2)}`],
-                [`3. Total Quantity:-    ${riceAbstract.total.toFixed(3)} Kg`, `3. Total Amount:-      ₹ ${cashAbstract.total.toFixed(2)}`],
-                [`4. Rice Consumed:-     ${riceAbstract.consumed?.toFixed(3)} Kg`, `4. Expenditure:-       ₹ ${cashAbstract.expenditure?.toFixed(2)}`],
-                [`5. Closing Balance:-   ${riceAbstract.balance.toFixed(3)} Kg`, `5. Closing Balance:-   ₹ ${cashAbstract.balance.toFixed(2)}`],
+                [`1. Opening Balance:-   ${riceAbstract.opening.toFixed(3)} Kg`, `1. Opening Balance:-   Rs. ${cashAbstract.opening.toFixed(2)}`],
+                [`2. Quantity received:- ${riceAbstract.received.toFixed(3)} Kg`, `2. Amount received:-   Rs. ${cashAbstract.received.toFixed(2)}`],
+                [`3. Total Quantity:-    ${riceAbstract.total.toFixed(3)} Kg`, `3. Total Amount:-      Rs. ${cashAbstract.total.toFixed(2)}`],
+                [`4. Rice Consumed:-     ${riceAbstract.consumed?.toFixed(3)} Kg`, `4. Expenditure:-       Rs. ${cashAbstract.expenditure?.toFixed(2)}`],
+                [`5. Closing Balance:-   ${riceAbstract.balance.toFixed(3)} Kg`, `5. Closing Balance:-   Rs. ${cashAbstract.balance.toFixed(2)}`],
             ],
             startY: doc.lastAutoTable.finalY + 5,
             theme: 'grid',
