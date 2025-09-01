@@ -27,6 +27,8 @@ export const DEFAULT_SETTINGS: Settings = {
         district: "District",
         block: "Block",
         village: "Village/Ward",
+        schoolTypeMDCF: '',
+        schoolCategoryMDCF: 'Primary with Upper Primary',
     },
     classRolls: CLASS_STRUCTURE.map(c => ({
         ...c,
@@ -51,6 +53,12 @@ export const DEFAULT_SETTINGS: Settings = {
     inspectionReport: {
         inspected: false,
         incidentsCount: 0,
+        inspectedBy: {
+            taskForce: false,
+            districtOfficials: false,
+            blockOfficials: false,
+            smcMembers: false,
+        },
     },
     initialOpeningBalance: {
         rice: { balvatika: 0, primary: 0, middle: 0 },
@@ -66,4 +74,5 @@ export const DEFAULT_SETTINGS: Settings = {
         lowCashThreshold: 500, // in rupees
         backupReminderFrequency: 30, // in days
     },
+    mmeExpenditure: 0,
 };

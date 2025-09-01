@@ -40,12 +40,32 @@ export const calculateMonthlySummary = (data: AppData, selectedMonth: string) =>
         rice: { balvatika: 0, primary: 0, middle: 0 },
         expenditure: { balvatika: 0, primary: 0, middle: 0 },
     };
+    
+    const expenditureBreakdown = {
+        dalVeg: 0,
+        oilCond: 0,
+        salt: 0,
+        fuel: 0,
+    };
 
     entries.forEach(entry => {
         categories.forEach(cat => {
             const present = entry.present[cat];
             categoryTotals.present[cat] += present;
-            categoryTotals.expenditure[cat] += present * (rates.dalVeg[cat] + rates.oilCond[cat] + rates.salt[cat] + rates.fuel[cat]);
+            
+            const dailyExp = {
+                dalVeg: present * rates.dalVeg[cat],
+                oilCond: present * rates.oilCond[cat],
+                salt: present * rates.salt[cat],
+                fuel: present * rates.fuel[cat],
+            };
+            
+            expenditureBreakdown.dalVeg += dailyExp.dalVeg;
+            expenditureBreakdown.oilCond += dailyExp.oilCond;
+            expenditureBreakdown.salt += dailyExp.salt;
+            expenditureBreakdown.fuel += dailyExp.fuel;
+            
+            categoryTotals.expenditure[cat] += dailyExp.dalVeg + dailyExp.oilCond + dailyExp.salt + dailyExp.fuel;
             categoryTotals.rice[cat] += (present * rates.rice[cat]) / 1000;
         });
     });
@@ -90,7 +110,7 @@ export const calculateMonthlySummary = (data: AppData, selectedMonth: string) =>
         cash: { balvatika: cashAbstracts.balvatika.balance, primary: cashAbstracts.primary.balance, middle: cashAbstracts.middle.balance },
     };
     
-    return { monthEntries: entries, riceAbstracts, cashAbstracts, totals, categoryTotals, closingBalance };
+    return { monthEntries: entries, riceAbstracts, cashAbstracts, totals, categoryTotals, closingBalance, expenditureBreakdown };
 };
 
 export const calculateOverallBalance = (data: AppData) => {

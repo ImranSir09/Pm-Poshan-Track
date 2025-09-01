@@ -1,9 +1,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { GoogleGenAI } from '@google/genai';
 import Card from '../ui/Card';
-import Button from '../ui/Button';
 import { useData } from '../../hooks/useData';
 import { DailyEntry } from '../../types';
 import { useToast } from '../../hooks/useToast';
@@ -18,8 +16,6 @@ const Dashboard: React.FC = () => {
     const { mdmIncharge } = settings;
 
     const [isLoading, setIsLoading] = useState(true);
-    const [aiInsight, setAiInsight] = useState('');
-    const [isGeneratingInsight, setIsGeneratingInsight] = useState(false);
 
     // Daily Entry Reminder
     useEffect(() => {
@@ -71,62 +67,6 @@ const Dashboard: React.FC = () => {
 
         return { totalExpenditure, totalRice, monthlyData: chartData };
     }, [data.entries, displayedMonthKey]);
-
-    const generateInsight = async () => {
-        setIsGeneratingInsight(true);
-        setAiInsight('');
-
-        try {
-            // Per platform guidelines, the API key is expected to be in `process.env.API_KEY`.
-            // The execution environment is responsible for making this variable available.
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            
-            const monthName = new Date(displayedMonthKey + '-02T00:00:00').toLocaleString('default', { month: 'long' });
-            const mealDays = monthlyData.filter(d => d.total > 0).length;
-            const avgAttendance = (monthlyData.reduce((sum, d) => sum + d.total, 0) / (mealDays || 1)).toFixed(0)
-
-            const prompt = `
-                Analyze the following PM POSHAN (Mid-Day Meal) data for ${monthName} for a school in India and provide a short, actionable insight for the MDM incharge.
-                Keep the insight concise and helpful (2-3 sentences). Focus on one key observation from the data.
-                
-                Data:
-                - Total days meals were served: ${mealDays}
-                - Total expenditure: ₹${totalExpenditure.toFixed(2)}
-                - Total rice consumed: ${totalRice.toFixed(2)} kg
-                - Average daily student attendance on meal days: ${avgAttendance} students.
-                - Days with zero meals served (excluding Sundays): ${monthlyData.filter(d => d.total === 0 && d.date.getDay() !== 0 && d.date <= new Date()).length}
-                
-                Example insights:
-                - "Attendance seems consistent this month. Consider checking your stock levels for next month to ensure you have enough rice."
-                - "Expenditure is within the expected range. Great job managing the budget!"
-                - "There were several days with no meals served. Ensure you have backup cooks available to avoid disruption."
-            `;
-
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: prompt,
-            });
-            
-            setAiInsight(response.text);
-
-        } catch (error) {
-            console.error("AI insight generation failed:", error);
-            // If the call fails, it might be due to a missing key. Provide a helpful message.
-            if (error instanceof ReferenceError) { // Catches "process is not defined"
-                setAiInsight('AI features are not configured for this environment.');
-                showToast('AI features not available.', 'error');
-            } else if (error instanceof Error && error.message.toLowerCase().includes('api key')) {
-                setAiInsight('AI Insight generation failed. The API key might be invalid or missing.');
-                showToast('AI features are not configured correctly.', 'error');
-            }
-            else {
-                showToast('Failed to generate AI insight.', 'error');
-                setAiInsight('Could not generate an insight at this time. Please try again later.');
-            }
-        } finally {
-            setIsGeneratingInsight(false);
-        }
-    };
     
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
@@ -205,22 +145,6 @@ const Dashboard: React.FC = () => {
                         <div className="flex items-center"><div className="w-3 h-3 rounded-full bg-[#ef4444] mr-1"></div>Sunday</div>
                     </div>
                 </div>
-            </Card>
-
-            <Card title="AI-Powered Insight">
-                {isGeneratingInsight ? (
-                    <div className="flex items-center justify-center space-x-2 text-stone-500 dark:text-gray-400 min-h-[40px]">
-                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        <span>Generating...</span>
-                    </div>
-                ) : aiInsight ? (
-                    <p className="text-sm text-stone-600 dark:text-gray-300 italic">"{aiInsight}"</p>
-                ) : (
-                     <p className="text-sm text-stone-500 dark:text-gray-400">Click to get an AI analysis of '{new Date(displayedMonthKey + '-02T00:00:00').toLocaleString('default', { month: 'long' })}' data.</p>
-                )}
-                 <Button onClick={generateInsight} disabled={isGeneratingInsight} className="w-full mt-3" variant="secondary">
-                    {aiInsight ? 'Regenerate Insight' : 'Get Insight'}
-                </Button>
             </Card>
         </div>
     );

@@ -4,7 +4,7 @@ import { Accordion, AccordionItem } from '../ui/Accordion';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 import { useData } from '../../hooks/useData';
-import { Settings, SchoolDetails, Rates, Category, CookCumHelper, ClassRoll, MonthlyBalanceData, MDMIncharge, NotificationSettings } from '../../types';
+import { Settings, SchoolDetails, Rates, Category, CookCumHelper, ClassRoll, MonthlyBalanceData, MDMIncharge, NotificationSettings, InspectionReport } from '../../types';
 import { useToast } from '../../hooks/useToast';
 import { CLASS_STRUCTURE } from '../../constants';
 import { indianStates, jkDistrictsWithZones } from '../../data/locations';
@@ -160,6 +160,19 @@ const SettingsPage: React.FC = () => {
         setSettings(prev => ({ ...prev, inspectionReport: { ...prev.inspectionReport, [field]: finalValue }}));
     }
 
+    const handleInspectionByChange = (field: keyof InspectionReport['inspectedBy'], value: boolean) => {
+        setSettings(prev => ({
+            ...prev,
+            inspectionReport: {
+                ...prev.inspectionReport,
+                inspectedBy: {
+                    ...prev.inspectionReport.inspectedBy,
+                    [field]: value
+                }
+            }
+        }));
+    };
+
     const handleSave = () => {
         const isUdiseCorrectLength = settings.schoolDetails.udise.length === 11 || settings.schoolDetails.udise.length === 0;
         setIsUdiseValid(isUdiseCorrectLength);
@@ -217,8 +230,29 @@ const SettingsPage: React.FC = () => {
                                         />
                                         {!isUdiseValid && <p className="mt-1 text-xs text-red-500 dark:text-red-400">UDISE code must be 11 digits long.</p>}
                                     </div>
-                                    <Input label="School Type" id="schoolType" value={settings.schoolDetails.type} onChange={e => handleSchoolDetailsChange('type', e.target.value)} />
-                                    <Input label="School Category" id="schoolCategory" value={settings.schoolDetails.category} onChange={e => handleSchoolDetailsChange('category', e.target.value)} />
+                                    <Input label="School Type (General)" id="schoolType" value={settings.schoolDetails.type} onChange={e => handleSchoolDetailsChange('type', e.target.value)} />
+                                    <Input label="School Category (General)" id="schoolCategory" value={settings.schoolDetails.category} onChange={e => handleSchoolDetailsChange('category', e.target.value)} />
+                                    
+                                    <div>
+                                        <label htmlFor="schoolTypeMDCF" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">School Type (for MDCF Report)</label>
+                                        <select id="schoolTypeMDCF" value={settings.schoolDetails.schoolTypeMDCF} onChange={e => handleSchoolDetailsChange('schoolTypeMDCF', e.target.value)} className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5">
+                                            <option value="">Select Type</option>
+                                            <option value="Government">Government</option>
+                                            <option value="Local Body">Local Body</option>
+                                            <option value="EGS/AIE Centers">EGS/AIE Centers</option>
+                                            <option value="NCLP">NCLP</option>
+                                            <option value="Madras / Maqtab">Madras / Maqtab</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label htmlFor="schoolCategoryMDCF" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">School Category (for MDCF Report)</label>
+                                        <select id="schoolCategoryMDCF" value={settings.schoolDetails.schoolCategoryMDCF} onChange={e => handleSchoolDetailsChange('schoolCategoryMDCF', e.target.value)} className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5">
+                                            <option value="Primary">Primary</option>
+                                            <option value="Upper Primary">Upper Primary</option>
+                                            <option value="Primary with Upper Primary">Primary with Upper Primary</option>
+                                        </select>
+                                    </div>
+
                                     <Input label="Kitchen Type" id="kitchenType" value={settings.schoolDetails.kitchenType} onChange={e => handleSchoolDetailsChange('kitchenType', e.target.value)} />
                                     <div>
                                         <label htmlFor="state" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">State</label>
@@ -430,6 +464,14 @@ const SettingsPage: React.FC = () => {
                                             <Input label="Middle" id="ob-cash-mid" type="number" step="0.01" value={settings.initialOpeningBalance?.cash?.middle || 0} onChange={e => handleOpeningBalanceChange('cash', 'middle', e.target.value)} />
                                         </div>
                                     </fieldset>
+                                    <Input 
+                                        label="MME Expenditure for this month (₹)" 
+                                        id="mme-expenditure" 
+                                        type="number" 
+                                        step="0.01"
+                                        value={settings.mmeExpenditure || 0}
+                                        onChange={e => setSettings(prev => ({ ...prev, mmeExpenditure: parseFloat(e.target.value) || 0 }))}
+                                    />
                                 </div>
                             </div>
                             <div>
@@ -520,6 +562,19 @@ const SettingsPage: React.FC = () => {
                                             <div className="w-11 h-6 bg-stone-200 dark:bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-amber-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
                                         </label>
                                     </div>
+                                    {settings.inspectionReport.inspected && (
+                                        <div className="p-3 border border-amber-300/50 dark:border-gray-600 rounded-lg">
+                                            <p className="text-xs font-medium text-stone-600 dark:text-gray-300 mb-2">Inspected by:</p>
+                                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                                {(Object.keys(settings.inspectionReport.inspectedBy) as Array<keyof InspectionReport['inspectedBy']>).map(key => (
+                                                    <label key={key} className="flex items-center space-x-2">
+                                                        <input type="checkbox" checked={settings.inspectionReport.inspectedBy[key]} onChange={e => handleInspectionByChange(key, e.target.checked)} className="rounded text-amber-600 focus:ring-amber-500" />
+                                                        <span className="text-stone-700 dark:text-gray-300 capitalize">{key.replace(/([A-Z])/g, ' $1').replace('Smc', 'SMC')}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                     <Input label="Number of untoward incidents" id="incidents" type="number" value={settings.inspectionReport.incidentsCount} onChange={e => handleInspectionChange('incidentsCount', e.target.value)} />
                                 </div>
                             </div>

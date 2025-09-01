@@ -54,6 +54,9 @@ export interface SchoolDetails {
     district: string;
     block: string;
     village: string;
+    // New fields for MDCF report
+    schoolTypeMDCF: 'Government' | 'Local Body' | 'EGS/AIE Centers' | 'NCLP' | 'Madras / Maqtab' | '';
+    schoolCategoryMDCF: 'Primary' | 'Upper Primary' | 'Primary with Upper Primary' | '';
 }
 
 export interface CookCumHelper {
@@ -75,6 +78,13 @@ export interface HealthStatus {
 export interface InspectionReport {
     inspected: boolean;
     incidentsCount: number;
+    // New field for MDCF report
+    inspectedBy: {
+        taskForce: boolean;
+        districtOfficials: boolean;
+        blockOfficials: boolean;
+        smcMembers: boolean;
+    };
 }
 
 export interface MDMIncharge {
@@ -100,6 +110,7 @@ export interface Settings {
     initialOpeningBalance: MonthlyBalanceData;
     mdmIncharge: MDMIncharge;
     notificationSettings: NotificationSettings;
+    mmeExpenditure: number; // New field for MDCF report
 }
 
 export interface DailyEntry {

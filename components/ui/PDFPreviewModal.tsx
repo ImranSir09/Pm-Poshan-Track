@@ -6,9 +6,10 @@ interface PDFPreviewModalProps {
     onClose: () => void;
     pdfDataUri: string;
     filename: string;
+    onRegenerate: () => void;
 }
 
-const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({ isOpen, onClose, pdfDataUri, filename }) => {
+const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({ isOpen, onClose, pdfDataUri, filename, onRegenerate }) => {
     if (!isOpen) return null;
 
     const handleDownload = () => {
@@ -25,6 +26,9 @@ const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({ isOpen, onClose, pdfD
             <div className="flex-shrink-0 flex items-center justify-between pb-2 sm:pb-4">
                 <h3 className="text-md sm:text-lg font-bold text-amber-300 truncate pr-2">{filename}</h3>
                 <div className="flex items-center space-x-2">
+                    <Button variant="secondary" onClick={onRegenerate}>
+                        Regenerate
+                    </Button>
                     <Button onClick={handleDownload}>
                         Download
                     </Button>
