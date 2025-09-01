@@ -1,5 +1,3 @@
-
-import 'jspdf-autotable';
 import { AppData, ClassRoll } from '../types';
 import { calculateMonthlySummary } from '../services/summaryCalculator';
 import { CLASS_STRUCTURE } from '../constants';
