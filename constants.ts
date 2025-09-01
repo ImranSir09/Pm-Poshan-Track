@@ -11,9 +11,9 @@ export const CLASS_STRUCTURE: { id: string, name: string }[] = [
     { id: 'c3', name: '3rd' },
     { id: 'c2', name: '2nd' },
     { id: 'c1', name: '1st' },
+    { id: 'bal', name: 'Balvatika' },
     { id: 'pp2', name: 'PP2' },
     { id: 'pp1', name: 'PP1' },
-    { id: 'bal', name: 'Balvatika' },
 ];
 
 export const DEFAULT_SETTINGS: Settings = {

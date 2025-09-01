@@ -2,7 +2,6 @@ import { AppData, Category, ClassRoll } from '../types';
 import { calculateMonthlySummary } from '../services/summaryCalculator';
 import { CLASS_STRUCTURE } from '../constants';
 
-
 interface jsPDF {
     autoTable: (options: any) => jsPDF;
     lastAutoTable: { finalY: number };
@@ -11,7 +10,24 @@ interface jsPDF {
 
 declare const jspdf: any;
 
-const generateNewMDCFReport = (data: AppData, month: string) => {
+const calculateSectionTotals = (classes: ClassRoll[]) => {
+    return classes.reduce((acc, cr) => {
+        acc.general.boys += cr.general.boys;
+        acc.general.girls += cr.general.girls;
+        acc.stsc.boys += cr.stsc.boys;
+        acc.stsc.girls += cr.stsc.girls;
+        acc.total.boys += cr.general.boys + cr.stsc.boys;
+        acc.total.girls += cr.general.girls + cr.stsc.girls;
+        acc.total.onRoll += cr.general.boys + cr.general.girls + cr.stsc.boys + cr.stsc.girls;
+        return acc;
+    }, {
+        general: { boys: 0, girls: 0 },
+        stsc: { boys: 0, girls: 0 },
+        total: { boys: 0, girls: 0, onRoll: 0 },
+    });
+};
+
+const generateMDCFReport = (data: AppData, month: string): string => {
     const doc = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) as jsPDF;
     const { settings, entries } = data;
     const { schoolDetails, healthStatus, inspectionReport, cooks } = settings;
@@ -20,10 +36,9 @@ const generateNewMDCFReport = (data: AppData, month: string) => {
     const { riceAbstracts, cashAbstracts, categoryTotals } = summary;
 
     const monthDate = new Date(`${month}-02T00:00:00Z`);
-    const monthName = monthDate.toLocaleString('default', { month: 'long' });
+    const monthName = monthDate.toLocaleString('default', { month: 'long', timeZone: 'UTC' });
     const year = monthDate.getFullYear();
 
-    // --- PAGE 1 ---
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.text('Pradhan Mantri Poshan Shakti Nirman (PM POSHAN)', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
@@ -34,31 +49,16 @@ const generateNewMDCFReport = (data: AppData, month: string) => {
     doc.text('Instructions: Keep following registers at the time of filling the form:-', 14, 22);
     doc.text('1) Enrolment Register. 2) Account 3) Bank Account Pass book. 4) Cooking cost details etc.', 14, 26);
 
-    // 1. School Details - Refactored to a single, robust table
     doc.setFont('helvetica', 'bold');
     doc.text('1. School Details', 14, 33);
 
-    const typeCheckbox = (label: string, value: string, currentValue: string) => {
-        return `${currentValue === value ? '☑' : '☐'} ${label}`;
-    };
-
+    const typeCheckbox = (label: string, value: string, currentValue: string) => `${currentValue === value ? '☑' : '☐'} ${label}`;
     const schoolTypeMDCF = settings.schoolDetails.schoolTypeMDCF;
     const schoolCategoryMDCF = settings.schoolDetails.schoolCategoryMDCF;
     const totalEnrollment = settings.classRolls.reduce((sum, c) => sum + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0);
 
-    const typeContent = [
-        typeCheckbox('Government', 'Government', schoolTypeMDCF),
-        typeCheckbox('Local Body', 'Local Body', schoolTypeMDCF),
-        typeCheckbox('EGS/AIE Centers', 'EGS/AIE Centers', schoolTypeMDCF),
-        typeCheckbox('NCLP', 'NCLP', schoolTypeMDCF),
-        typeCheckbox('Madras / Maqtab', 'Madras / Maqtab', schoolTypeMDCF)
-    ].join('  ');
-
-    const categoryContent = [
-        typeCheckbox('Primary', 'Primary', schoolCategoryMDCF),
-        typeCheckbox('Upper Primary', 'Upper Primary', schoolCategoryMDCF),
-        typeCheckbox('Primary with Upper Primary', 'Primary with Upper Primary', schoolCategoryMDCF)
-    ].join('   ');
+    const typeContent = ['Government', 'Local Body', 'EGS/AIE Centers', 'NCLP', 'Madras / Maqtab'].map(val => typeCheckbox(val, val, schoolTypeMDCF)).join('  ');
+    const categoryContent = ['Primary', 'Upper Primary', 'Primary with Upper Primary'].map(val => typeCheckbox(val, val, schoolCategoryMDCF)).join('   ');
 
     doc.autoTable({
         startY: 35,
@@ -73,27 +73,21 @@ const generateNewMDCFReport = (data: AppData, month: string) => {
             ['Kitchen Type', schoolDetails.kitchenType, 'Total Enrolment', totalEnrollment.toString()],
         ],
         styles: { fontSize: 8 },
-        columnStyles: {
-            0: { cellWidth: 30 },
-            2: { cellWidth: 30 },
-        }
+        columnStyles: { 0: { cellWidth: 30 }, 2: { cellWidth: 30 } }
     });
     
     let currentY = doc.lastAutoTable.finalY;
 
-    // 2. Meals Availed Status
     const mealDays = entries.filter(e => e.date.startsWith(month) && e.totalPresent > 0).length;
     const holidays = entries.filter(e => e.date.startsWith(month) && e.totalPresent === 0 && e.reasonForNoMeal?.toLowerCase().includes('holiday')).length;
-    const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
-    const sundays = Array.from({ length: daysInMonth }, (_, i) => new Date(monthDate.getFullYear(), monthDate.getMonth(), i + 1).getDay()).filter(day => day === 0).length;
+    const daysInMonth = new Date(year, monthDate.getUTCMonth() + 1, 0).getDate();
+    const sundays = Array.from({ length: daysInMonth }, (_, i) => new Date(year, monthDate.getUTCMonth(), i + 1).getDay()).filter(day => day === 0).length;
     const schoolDays = daysInMonth - sundays - holidays;
 
     doc.setFont('helvetica', 'bold');
     doc.text('2. Meals Availed Status', 14, currentY + 10);
     doc.autoTable({
-        startY: currentY + 12,
-        theme: 'grid',
-        head: [['', 'Bal Vatika', 'Primary', 'Upper Primary']],
+        startY: currentY + 12, theme: 'grid', head: [['', 'Bal Vatika', 'Primary', 'Upper Primary']],
         body: [
             ['Number of School days during month', { content: schoolDays, colSpan: 3, styles: { halign: 'center' } }],
             ['Actual number of days Mid Day Meal served', { content: mealDays, colSpan: 3, styles: { halign: 'center' } }],
@@ -104,380 +98,259 @@ const generateNewMDCFReport = (data: AppData, month: string) => {
     
     currentY = doc.lastAutoTable.finalY;
 
-    // 3. Fund Details
     const cookHelperExpenditure = cooks.reduce((sum, cook) => sum + cook.amountPaid, 0);
-    const totalClosing = cashAbstracts.balvatika.balance + cashAbstracts.primary.balance + cashAbstracts.middle.balance + cookHelperExpenditure + settings.mmeExpenditure;
+    const totalCashOpening = cashAbstracts.balvatika.opening + cashAbstracts.primary.opening + cashAbstracts.middle.opening;
+    const totalCashReceived = cashAbstracts.balvatika.received + cashAbstracts.primary.received + cashAbstracts.middle.received;
+    const totalCashExpenditure = (cashAbstracts.balvatika.expenditure || 0) + (cashAbstracts.primary.expenditure || 0) + (cashAbstracts.middle.expenditure || 0) + cookHelperExpenditure + settings.mmeExpenditure;
+    const totalCashClosing = cashAbstracts.balvatika.balance + cashAbstracts.primary.balance + cashAbstracts.middle.balance;
+    
     doc.setFont('helvetica', 'bold');
     doc.text('3. Fund Details (in Rs.)', 14, currentY + 10);
     doc.autoTable({
-        startY: currentY + 12,
-        theme: 'grid',
-        head: [['Component', 'Opening Balance', 'Received during the Month', 'Expenditure during the Month', 'Closing Balance']],
+        startY: currentY + 12, theme: 'grid', head: [['Component', 'Opening Balance', 'Received during the Month', 'Expenditure during the Month', 'Closing Balance']],
         body: [
             ['Cooking Cost - Bal Vatika', cashAbstracts.balvatika.opening.toFixed(2), cashAbstracts.balvatika.received.toFixed(2), cashAbstracts.balvatika.expenditure?.toFixed(2), cashAbstracts.balvatika.balance.toFixed(2)],
             ['Cooking Cost - Primary', cashAbstracts.primary.opening.toFixed(2), cashAbstracts.primary.received.toFixed(2), cashAbstracts.primary.expenditure?.toFixed(2), cashAbstracts.primary.balance.toFixed(2)],
-            ['Cooking Cost - Uper Primary', cashAbstracts.middle.opening.toFixed(2), cashAbstracts.middle.received.toFixed(2), cashAbstracts.middle.expenditure?.toFixed(2), cashAbstracts.middle.balance.toFixed(2)],
+            ['Cooking Cost - Upper Primary', cashAbstracts.middle.opening.toFixed(2), cashAbstracts.middle.received.toFixed(2), cashAbstracts.middle.expenditure?.toFixed(2), cashAbstracts.middle.balance.toFixed(2)],
             ['Cook Cum Helper', '', '', cookHelperExpenditure.toFixed(2), ''],
             ['School Expenses : MME Expenses', '', '', settings.mmeExpenditure.toFixed(2), ''],
-            [{ content: 'Whether the Sum of above Closing Balance matches with Bank Account Closing Balance. Yes [ ] No [ ]', colSpan: 5 }]
+            [{ content: 'Total', styles: { fontStyle: 'bold' } }, totalCashOpening.toFixed(2), totalCashReceived.toFixed(2), totalCashExpenditure.toFixed(2), totalCashClosing.toFixed(2)],
         ],
         styles: { fontSize: 8 },
     });
-    
     currentY = doc.lastAutoTable.finalY;
 
-    // 4. Cook Cum Helper Payment Details
-    const cchBody = [];
-    for (let i = 0; i < 4; i++) {
+    const totalRiceOpening = riceAbstracts.balvatika.opening + riceAbstracts.primary.opening + riceAbstracts.middle.opening;
+    const totalRiceReceived = riceAbstracts.balvatika.received + riceAbstracts.primary.received + riceAbstracts.middle.received;
+    const totalRiceConsumed = (riceAbstracts.balvatika.consumed || 0) + (riceAbstracts.primary.consumed || 0) + (riceAbstracts.middle.consumed || 0);
+    const totalRiceBalance = riceAbstracts.balvatika.balance + riceAbstracts.primary.balance + riceAbstracts.middle.balance;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('4. Food Grain Details (in Kg)', 14, currentY + 10);
+    doc.autoTable({
+        startY: currentY + 12, theme: 'grid', head: [['Item', 'Opening Balance', 'Received during the Month', 'Total', 'Utilized during the Month', 'Closing Balance']],
+        body: [
+            ['Rice - Bal Vatika', riceAbstracts.balvatika.opening.toFixed(3), riceAbstracts.balvatika.received.toFixed(3), riceAbstracts.balvatika.total.toFixed(3), riceAbstracts.balvatika.consumed?.toFixed(3), riceAbstracts.balvatika.balance.toFixed(3)],
+            ['Rice - Primary', riceAbstracts.primary.opening.toFixed(3), riceAbstracts.primary.received.toFixed(3), riceAbstracts.primary.total.toFixed(3), riceAbstracts.primary.consumed?.toFixed(3), riceAbstracts.primary.balance.toFixed(3)],
+            ['Rice - Upper Primary', riceAbstracts.middle.opening.toFixed(3), riceAbstracts.middle.received.toFixed(3), riceAbstracts.middle.total.toFixed(3), riceAbstracts.middle.consumed?.toFixed(3), riceAbstracts.middle.balance.toFixed(3)],
+            [{ content: 'Total', styles: { fontStyle: 'bold' } }, totalRiceOpening.toFixed(3), totalRiceReceived.toFixed(3), (totalRiceOpening + totalRiceReceived).toFixed(3), totalRiceConsumed.toFixed(3), totalRiceBalance.toFixed(3)],
+        ],
+        styles: { fontSize: 8 },
+    });
+    currentY = doc.lastAutoTable.finalY;
+
+    if (currentY > 250) { doc.addPage(); currentY = 15; }
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('5. Cook-cum-helper Details', 14, currentY + 10);
+    const cookBody = Array.from({ length: 4 }, (_, i) => {
         const cook = cooks[i];
-        cchBody.push([
-            i + 1,
-            cook ? cook.name : '',
-            cook ? cook.gender.charAt(0) : '',
-            cook ? cook.category : '',
-            cook ? cook.paymentMode : '',
-            cook ? cook.amountPaid.toFixed(2) : ''
-        ]);
-    }
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('4. Cook Cum Helper Payment Details', 14, currentY + 10);
-    doc.autoTable({
-        startY: currentY + 12,
-        theme: 'grid',
-        head: [['S.No.', 'Cook Name', 'Gender (M/F)', 'Category (SC/ST/OBC/GEN)', 'Payment Mode (Cash/Bank)', 'Amount Received during month (In Rs.)']],
-        body: cchBody,
-        styles: { fontSize: 8 },
+        return [i + 1, cook?.name || '', cook?.gender || '', cook?.category || '', cook ? 'Yes' : 'No', cook?.amountPaid.toFixed(2) || '0.00', cook?.paymentMode || ''];
     });
-
-    // --- PAGE 2 ---
-    doc.addPage();
-    
-    // 5. Food Grains Details (in KG.)
-    doc.setFont('helvetica', 'bold');
-    doc.text('5. Food Grains Details (in KG.)', 14, 15);
     doc.autoTable({
-        startY: 17,
-        theme: 'grid',
-        head: [['Category', 'Food Item', 'Opening Balance', 'Received during the Month', 'Consumption during the Month', 'Closing Balance']],
-        body: [
-            ['Bal Vatika', 'Wheat', '0.000', '0.000', '0.000', '0.000'],
-            ['', 'Rice', riceAbstracts.balvatika.opening.toFixed(3), riceAbstracts.balvatika.received.toFixed(3), riceAbstracts.balvatika.consumed?.toFixed(3), riceAbstracts.balvatika.balance.toFixed(3)],
-            ['Primary', 'Wheat', '0.000', '0.000', '0.000', '0.000'],
-            ['', 'Rice', riceAbstracts.primary.opening.toFixed(3), riceAbstracts.primary.received.toFixed(3), riceAbstracts.primary.consumed?.toFixed(3), riceAbstracts.primary.balance.toFixed(3)],
-            ['Upper Primary', 'Wheat', '0.000', '0.000', '0.000', '0.000'],
-            ['', 'Rice', riceAbstracts.middle.opening.toFixed(3), riceAbstracts.middle.received.toFixed(3), riceAbstracts.middle.consumed?.toFixed(3), riceAbstracts.middle.balance.toFixed(3)],
-        ],
-        didParseCell: (data: any) => {
-            if (data.cell.raw === '') { data.cell.styles.border = [false, false, false, false]; }
-        },
-        styles: { fontSize: 8 },
+        startY: currentY + 12, theme: 'grid', head: [['S.No', 'Name', 'Gender', 'Category', 'Trained in hygiene', 'Honorarium Paid (Rs)', 'Payment Mode']],
+        body: cookBody, styles: { fontSize: 8 },
     });
-    
-    currentY = doc.lastAutoTable.finalY;
-
-    // 6. Children Health Status
-    doc.setFont('helvetica', 'bold');
-    doc.text('6. Children Health Status', 14, currentY + 10);
-    doc.autoTable({
-        startY: currentY + 12,
-        theme: 'grid',
-        body: [
-            ['No. of children from class 1 to 8 who had received 4 IFA tablets (Boys) -', healthStatus.ifaBoys],
-            ['No. of children from class 1 to 8 who had received 4 IFA tablets (Girls)', healthStatus.ifaGirls],
-            ['No. of children screened by mobile health (RBSK) team', healthStatus.screenedByRBSK],
-            ['No. of children referred by mobile health (RBSK) team', healthStatus.referredByRBSK],
-        ],
-        styles: { fontSize: 8 },
-    });
-    
     currentY = doc.lastAutoTable.finalY;
     
-    // 7. School Inspection
-    const inspectedByText = Object.entries(inspectionReport.inspectedBy)
-        .filter(([, checked]) => checked)
-        .map(([key]) => key.replace(/([A-Z])/g, ' $1').replace('Smc', 'SMC').trim().replace(/\b\w/g, l => l.toUpperCase()))
-        .join(', ');
-
     doc.setFont('helvetica', 'bold');
-    doc.text('7. School Inspection', 14, currentY + 10);
+    doc.text('6. Other Details', 14, currentY + 10);
+    const inspectedByText = Object.entries(inspectionReport.inspectedBy).filter(([, val]) => val).map(([key]) => key.replace(/([A-Z])/g, ' $1').replace('Smc', 'SMC').trim().replace(/\b\w/g, l => l.toUpperCase())).join(', ') || (inspectionReport.inspected ? 'Not Specified' : 'N/A');
     doc.autoTable({
-        startY: currentY + 12,
-        theme: 'grid',
-        body: [
-            ['School Inspection done during the month', `Yes [${inspectionReport.inspected ? '✔' : ' '}] No [${!inspectionReport.inspected ? '✔' : ' '}]`],
-            ['By Members of Task Force / District Officials / Block Officials / SMC Members', inspectedByText]
+        startY: currentY + 12, theme: 'grid', body: [
+            ['Number of Children given IFA Tablets', `Boys: ${healthStatus.ifaBoys}, Girls: ${healthStatus.ifaGirls}`],
+            ['Number of Children screened by RBSK Team', healthStatus.screenedByRBSK],
+            ['Number of Children referred by RBSK Team', healthStatus.referredByRBSK],
+            ['Was inspection done this month?', inspectionReport.inspected ? 'Yes' : 'No'],
+            ['Inspected By', inspectedByText],
+            ['Number of untoward incidents reported', inspectionReport.incidentsCount],
         ],
-        styles: { fontSize: 8 },
+        styles: { fontSize: 8 }, columnStyles: { 0: { cellWidth: 80 } }
     });
-    
-    currentY = doc.lastAutoTable.finalY;
 
-    // 8. Incidents & Signatures
-    doc.setFont('helvetica', 'bold');
-    doc.text('Number of Untoward Incidents Occurred', 14, currentY + 10);
-    doc.autoTable({
-        startY: currentY + 12,
-        theme: 'grid',
-        body: [[inspectionReport.incidentsCount]],
-        styles: { fontSize: 8 },
-    });
+    doc.setFontSize(9);
+    doc.text('Signature of MDM Incharge', 14, doc.internal.pageSize.getHeight() - 20);
+    doc.text('Signature of Head of School', doc.internal.pageSize.getWidth() - 14, doc.internal.pageSize.getHeight() - 20, { align: 'right' });
     
-    const finalY = doc.lastAutoTable.finalY;
-    doc.text('....................................................................', 14, finalY + 25);
-    doc.text('Signature of the SMC Chairperson / Gram Pradhan', 14, finalY + 30);
-    
-    doc.text('....................................................................', 110, finalY + 25);
-    doc.text('Signature of Head Teacher', 110, finalY + 30);
+    doc.setFontSize(8);
+    doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, 14, doc.internal.pageSize.getHeight() - 10);
+    doc.text('Created from PM Poshan Track App by Imran Gani Mugloo, Teacher Zone Vailoo', doc.internal.pageSize.getWidth() - 14, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
 
-    const filename = `MDCF_${schoolDetails.name.replace(/\s+/g, '_')}_${month}.pdf`;
-    return { dataUri: doc.output('datauristring'), filename };
+    return doc.output('datauristring');
 };
 
-const generateNewDailyConsumptionReport = (data: AppData, month: string) => {
-    const doc = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) as jsPDF;
-    const { settings } = data;
-    const { schoolDetails, rates } = settings;
-
-    const summary = calculateMonthlySummary(data, month);
-    // Correctly create a UTC date to avoid timezone-off-by-one errors.
-    const monthDate = new Date(month + '-01T12:00:00Z');
-    const monthName = monthDate.toLocaleString('en-IN', { month: 'long', timeZone: 'UTC' });
-    const yearName = monthDate.toLocaleString('en-IN', { year: 'numeric', timeZone: 'UTC' });
-    
-    const categories: Category[] = ['balvatika', 'primary', 'middle'];
-    const departmentMap = {
-        balvatika: 'Pre-Primary',
-        primary: 'Primary',
-        middle: 'Upper-Primary'
-    };
-
-    const onRolls = categories.reduce((acc, category) => {
-        let total = 0;
-        const catClasses = {
-            balvatika: ['bal', 'pp1', 'pp2'],
-            primary: ['c1', 'c2', 'c3', 'c4', 'c5'],
-            middle: ['c6', 'c7', 'c8']
-        }[category];
-
-        settings.classRolls.forEach(c => {
-            if (catClasses.includes(c.id)) {
-                total += c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls;
-            }
-        });
-        acc[category] = total;
-        return acc;
-    }, {} as Record<Category, number>);
-
-    let firstPageDrawn = false;
-    categories.forEach((category) => {
-        if (onRolls[category] === 0) return; // Skip departments with no students
-
-        if (firstPageDrawn) {
-            doc.addPage();
-        }
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(14);
-        doc.text(schoolDetails.name, doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' });
-        doc.setFontSize(11);
-        doc.text('Daily Consumption Register of Mid-day Meals', doc.internal.pageSize.getWidth() / 2, 18, { align: 'center' });
-        
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        const pageWidth = doc.internal.pageSize.getWidth();
-        doc.text(`Month: ${monthName} ${yearName}`, 14, 25);
-        doc.text(`Department: ${departmentMap[category]}`, pageWidth - 14, 25, { align: 'right' });
-        
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'italic');
-        const totalCost = (rates.dalVeg[category] + rates.salt[category] + rates.oilCond[category] + rates.fuel[category]).toFixed(2);
-        doc.text(
-            `Rates per student: Rice @ ${(rates.rice[category] / 1000).toFixed(3)} kg | Cooking Cost @ Rs ${totalCost}`,
-            14, 30
-        );
-        
-        const head = [['S.No', 'Date', 'Roll', 'Present', 'Rice (kg)', 'Dal/Veg', 'Salt', 'Oil/Cond', 'Fuel', 'Total (Rs.)']];
-        
-        const body: any[] = [];
-        const year = monthDate.getUTCFullYear();
-        const monthIndex = monthDate.getUTCMonth();
-        const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-        
-        for (let i = 1; i <= daysInMonth; i++) {
-            const date = new Date(Date.UTC(year, monthIndex, i));
-            
-            const yearStr = date.getUTCFullYear();
-            const monthStr = (date.getUTCMonth() + 1).toString().padStart(2, '0');
-            const dayStr = date.getUTCDate().toString().padStart(2, '0');
-            const dateString = `${yearStr}-${monthStr}-${dayStr}`;
-
-            const entry = summary.monthEntries.find(e => e.id === dateString);
-
-            if (date.getUTCDay() === 0) { // Sunday
-                body.push([i, date.toLocaleDateString('en-GB', { timeZone: 'UTC' }), '', '', { content: 'Sunday', colSpan: 6, styles: { halign: 'center' } }]);
-            } else if (entry) {
-                const present = entry.present[category];
-                const fgUsed = (present * rates.rice[category]) / 1000;
-                const dalVeg = present * rates.dalVeg[category];
-                const salt = present * rates.salt[category];
-                const oilCond = present * rates.oilCond[category];
-                const fuel = present * rates.fuel[category];
-                const total = dalVeg + salt + oilCond + fuel;
-                
-                body.push([
-                    i,
-                    date.toLocaleDateString('en-GB', { timeZone: 'UTC' }),
-                    onRolls[category],
-                    present,
-                    present > 0 ? fgUsed.toFixed(3) : '0.000',
-                    present > 0 ? dalVeg.toFixed(2) : '0.00',
-                    present > 0 ? salt.toFixed(2) : '0.00',
-                    present > 0 ? oilCond.toFixed(2) : '0.00',
-                    present > 0 ? fuel.toFixed(2) : '0.00',
-                    present > 0 ? total.toFixed(2) : '0.00',
-                ]);
-            } else {
-                 body.push([i, date.toLocaleDateString('en-GB', { timeZone: 'UTC' }), onRolls[category], 0, '0.000', '0.00', '0.00', '0.00', '0.00', '0.00']);
-            }
-        }
-        
-        doc.autoTable({
-            head, body, startY: 34, theme: 'grid',
-            styles: { fontSize: 8, halign: 'center' },
-            headStyles: { fontStyle: 'bold' }
-        });
-        
-        const riceAbstract = summary.riceAbstracts[category];
-        const cashAbstract = summary.cashAbstracts[category];
-        
-        doc.autoTable({
-            head: [['Abstract of Rice', 'Abstract of Cash']],
-            body: [
-                [`1. Opening Balance:-   ${riceAbstract.opening.toFixed(3)} Kg`, `1. Opening Balance:-   Rs ${cashAbstract.opening.toFixed(2)}`],
-                [`2. Quantity received:- ${riceAbstract.received.toFixed(3)} Kg`, `2. Amount received:-   Rs ${cashAbstract.received.toFixed(2)}`],
-                [`3. Total Quantity:-    ${riceAbstract.total.toFixed(3)} Kg`, `3. Total Amount:-      Rs ${cashAbstract.total.toFixed(2)}`],
-                [`4. Rice Consumed:-     ${riceAbstract.consumed?.toFixed(3)} Kg`, `4. Expenditure:-       Rs ${cashAbstract.expenditure?.toFixed(2)}`],
-                [`5. Closing Balance:-   ${riceAbstract.balance.toFixed(3)} Kg`, `5. Closing Balance:-   Rs ${cashAbstract.balance.toFixed(2)}`],
-            ],
-            startY: doc.lastAutoTable.finalY + 5,
-            theme: 'grid',
-            styles: { fontSize: 9 },
-            headStyles: { fontStyle: 'bold', halign: 'center' }
-        });
-        
-        doc.setFontSize(8);
-        doc.text('created from pm poshan track app by Imran Gani Mugloo Teacher Zone Vailoo', doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 5, { align: 'center' });
-
-        firstPageDrawn = true;
-    });
-
-    const filename = `DailyConsumption_${schoolDetails.name.replace(/\s+/g, '_')}_${month}.pdf`;
-    return { dataUri: doc.output('datauristring'), filename };
-};
-
-const generateRollStatementReport = (data: AppData) => {
+const generateRollStatementReport = (data: AppData): string => {
     const doc = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) as jsPDF;
     const { settings } = data;
     const { schoolDetails, classRolls } = settings;
 
-    doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
-    doc.text('Student Roll Statement', doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.text('Roll Statement', doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
     doc.setFontSize(10);
-    doc.text(`School: ${schoolDetails.name} (${schoolDetails.udise})`, doc.internal.pageSize.getWidth() / 2, 18, { align: 'center' });
+    doc.text(schoolDetails.name, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+    doc.text(`UDISE: ${schoolDetails.udise}`, doc.internal.pageSize.getWidth() / 2, 27, { align: 'center' });
 
-    const head = [[
-        { content: 'Class', rowSpan: 2 },
-        { content: 'General', colSpan: 2, styles: { halign: 'center' } },
-        { content: 'ST/SC', colSpan: 2, styles: { halign: 'center' } },
-        { content: 'Total', colSpan: 2, styles: { halign: 'center' } },
-        { content: 'On Roll', rowSpan: 2 },
-    ], [
-        'Boys', 'Girls', 'Boys', 'Girls', 'Boys', 'Girls'
-    ]];
-
-    const calculateSectionTotals = (classes: ClassRoll[]) => {
-        return classes.reduce((acc, cr) => {
-            acc.general.boys += cr.general.boys;
-            acc.general.girls += cr.general.girls;
-            acc.stsc.boys += cr.stsc.boys;
-            acc.stsc.girls += cr.stsc.girls;
-            const totalBoys = cr.general.boys + cr.stsc.boys;
-            const totalGirls = cr.general.girls + cr.stsc.girls;
-            acc.total.boys += totalBoys;
-            acc.total.girls += totalGirls;
-            acc.total.onRoll += totalBoys + totalGirls;
-            return acc;
-        }, {
-            general: { boys: 0, girls: 0 },
-            stsc: { boys: 0, girls: 0 },
-            total: { boys: 0, girls: 0, onRoll: 0 },
-        });
-    };
+    const classOrder = CLASS_STRUCTURE.reduce((acc, c, index) => ({ ...acc, [c.id]: index }), {} as Record<string, number>);
+    const sortFunction = (a: ClassRoll, b: ClassRoll) => (classOrder[a.id] ?? 99) - (classOrder[b.id] ?? 99);
     
-    const classOrder = CLASS_STRUCTURE.reduce((acc, c, index) => ({...acc, [c.id]: index}), {} as Record<string, number>);
-    const sortFn = (a: ClassRoll, b: ClassRoll) => (classOrder[a.id] ?? 99) - (classOrder[b.id] ?? 99);
+    const allRolls = classRolls || [];
+    const middleClasses = allRolls.filter(c => ['c6', 'c7', 'c8'].includes(c.id)).sort(sortFunction);
+    const primaryClasses = allRolls.filter(c => ['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)).sort(sortFunction);
+    const prePrimaryClasses = allRolls.filter(c => ['bal', 'pp1', 'pp2'].includes(c.id)).sort(sortFunction);
 
-    const prePrimary = classRolls.filter(c => ['bal', 'pp1', 'pp2'].includes(c.id)).sort(sortFn);
-    const primary = classRolls.filter(c => ['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)).sort(sortFn);
-    const middle = classRolls.filter(c => ['c6', 'c7', 'c8'].includes(c.id)).sort(sortFn);
-    
-    const body: any[] = [];
-    const sectionRow = (label: string, totals: ReturnType<typeof calculateSectionTotals>) => [
-        { content: label, styles: { fontStyle: 'bold' } },
-        totals.general.boys, totals.general.girls,
-        totals.stsc.boys, totals.stsc.girls,
-        totals.total.boys, totals.total.girls,
-        { content: totals.total.onRoll, styles: { fontStyle: 'bold' } }
+    const grandTotal = calculateSectionTotals(allRolls);
+
+    const head = [
+        [{ content: 'Class', rowSpan: 2 }, { content: 'General', colSpan: 2 }, { content: 'ST/SC', colSpan: 2 }, { content: 'Total', colSpan: 2 }, { content: 'On Roll', rowSpan: 2 }],
+        ['Boys', 'Girls', 'Boys', 'Girls', 'Boys', 'Girls']
     ];
-
-    const processSection = (title: string, classes: ClassRoll[]) => {
-        if (classes.length === 0) return;
-        body.push([{ content: title, colSpan: 8, styles: { fontStyle: 'bold', fillColor: [253, 246, 235] } }]);
-        classes.forEach(cr => {
-            const totalBoys = cr.general.boys + cr.stsc.boys;
-            const totalGirls = cr.general.girls + cr.stsc.girls;
-            body.push([
-                cr.name, cr.general.boys, cr.general.girls, cr.stsc.boys, cr.stsc.girls, totalBoys, totalGirls, totalBoys + totalGirls
-            ]);
-        });
-        body.push(sectionRow(`${title.split(' ')[0]} Total`, calculateSectionTotals(classes)));
-    }
-
-    processSection('Pre-Primary', prePrimary);
-    processSection('Primary (I-V)', primary);
-    processSection('Middle (VI-VIII)', middle);
-
-    body.push(sectionRow('Grand Total', calculateSectionTotals(classRolls)));
-
-    doc.autoTable({
-        head,
-        body,
-        startY: 25,
-        theme: 'grid',
-        styles: { fontSize: 9, halign: 'center' },
-        headStyles: { halign: 'center', valign: 'middle' },
-        didParseCell: function (data: any) {
-            if (data.row.raw[0].content?.includes('Total')) {
-                data.cell.styles.fontStyle = 'bold';
-            }
-        },
+    const body: any[] = [];
+    const mapClassToRow = (cr: ClassRoll) => {
+        const totalBoys = cr.general.boys + cr.stsc.boys;
+        const totalGirls = cr.general.girls + cr.stsc.girls;
+        return [cr.name, cr.general.boys, cr.general.girls, cr.stsc.boys, cr.stsc.girls, totalBoys, totalGirls, totalBoys + totalGirls];
+    };
+    const mapTotalToRow = (label: string, totals: ReturnType<typeof calculateSectionTotals>) => ({
+        content: [label, totals.general.boys, totals.general.girls, totals.stsc.boys, totals.stsc.girls, totals.total.boys, totals.total.girls, totals.total.onRoll],
+        styles: { fontStyle: 'bold', fillColor: [251, 243, 219] }
     });
 
-    const filename = `RollStatement_${schoolDetails.name.replace(/\s+/g, '_')}.pdf`;
-    return { dataUri: doc.output('datauristring'), filename };
+    if (middleClasses.length > 0) {
+        middleClasses.forEach(c => body.push(mapClassToRow(c)));
+        body.push(mapTotalToRow('Middle Total', calculateSectionTotals(middleClasses)));
+    }
+    if (primaryClasses.length > 0) {
+        primaryClasses.forEach(c => body.push(mapClassToRow(c)));
+        body.push(mapTotalToRow('Primary Total', calculateSectionTotals(primaryClasses)));
+    }
+    if (prePrimaryClasses.length > 0) {
+        prePrimaryClasses.forEach(c => body.push(mapClassToRow(c)));
+        body.push(mapTotalToRow('Pre-Primary Total', calculateSectionTotals(prePrimaryClasses)));
+    }
+
+    doc.autoTable({
+        startY: 35,
+        head: head,
+        body: body,
+        foot: [[ { content: 'Grand Total', styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } }, { content: grandTotal.general.boys, styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } }, { content: grandTotal.general.girls, styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } }, { content: grandTotal.stsc.boys, styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } }, { content: grandTotal.stsc.girls, styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } }, { content: grandTotal.total.boys, styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } }, { content: grandTotal.total.girls, styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } }, { content: grandTotal.total.onRoll, styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } }, ]],
+        theme: 'grid',
+        styles: { fontSize: 8, halign: 'center', valign: 'middle' },
+        headStyles: { fillColor: [245, 158, 11], textColor: [255, 255, 255] }
+    });
+    
+    doc.setFontSize(8);
+    doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, 14, doc.internal.pageSize.getHeight() - 10);
+    doc.text('Created from PM Poshan Track App by Imran Gani Mugloo, Teacher Zone Vailoo', doc.internal.pageSize.getWidth() - 14, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
+
+    return doc.output('datauristring');
 };
 
-export const generatePDFReport = (reportType: string, data: AppData, month: string): { dataUri: string, filename: string } => {
-    switch (reportType) {
-        case 'mdcf':
-            return generateNewMDCFReport(data, month);
-        case 'daily_consumption':
-            return generateNewDailyConsumptionReport(data, month);
-        case 'roll_statement':
-            return generateRollStatementReport(data);
-        default:
-            throw new Error(`Unknown report type: ${reportType}`);
+const generateDailyConsumptionReport = (data: AppData, month: string): string => {
+    const doc = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) as jsPDF;
+    const { settings, entries } = data;
+    const monthEntries = entries.filter(e => e.date.startsWith(month));
+    const monthDate = new Date(`${month}-02T00:00:00Z`);
+    const monthName = monthDate.toLocaleString('default', { month: 'long', timeZone: 'UTC' });
+    const year = monthDate.getFullYear();
+
+    const categories: Category[] = ['balvatika', 'primary', 'middle'];
+    const onRoll = categories.reduce((acc, cat) => ({...acc, [cat]: 0}), {} as Record<Category, number>);
+    settings.classRolls.forEach(c => {
+        const total = c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls;
+        if (['bal', 'pp1', 'pp2'].includes(c.id)) onRoll.balvatika += total;
+        else if (['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)) onRoll.primary += total;
+        else if (['c6', 'c7', 'c8'].includes(c.id)) onRoll.middle += total;
+    });
+
+    let isFirstPage = true;
+    categories.forEach(category => {
+        if (onRoll[category] === 0) return;
+
+        if (!isFirstPage) doc.addPage();
+        isFirstPage = false;
+
+        doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+        doc.text('Daily Consumption Register', doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+        doc.setFontSize(10);
+        doc.text(`Month: ${monthName} ${year}`, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+        doc.text(`Category: ${category.charAt(0).toUpperCase() + category.slice(1)}`, doc.internal.pageSize.getWidth() / 2, 27, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.text(settings.schoolDetails.name, 14, 20);
+        doc.text(`UDISE: ${settings.schoolDetails.udise}`, 14, 25);
+        doc.text(`On Roll: ${onRoll[category]}`, doc.internal.pageSize.getWidth() - 14, 20, { align: 'right' });
+
+        const rates = settings.rates;
+        const rateHeaders = [`Rice: ${rates.rice[category]}g`, `Dal/Veg: Rs ${rates.dalVeg[category].toFixed(2)}`, `Oil/Cond: Rs ${rates.oilCond[category].toFixed(2)}`, `Salt: Rs ${rates.salt[category].toFixed(2)}`, `Fuel: Rs ${rates.fuel[category].toFixed(2)}`];
+        doc.setFontSize(8);
+        doc.text(rateHeaders.join(' | '), doc.internal.pageSize.getWidth() / 2, 34, { align: 'center' });
+
+        const head = [['Date', 'Present', 'Rice (kg)', 'Dal/Veg (Rs)', 'Oil/Cond (Rs)', 'Salt (Rs)', 'Fuel (Rs)', 'Total (Rs)', 'Reason for No Meal']];
+        const body = [];
+        const daysInMonth = new Date(year, monthDate.getUTCMonth() + 1, 0).getDate();
+        const totals = { present: 0, rice: 0, dalVeg: 0, oilCond: 0, salt: 0, fuel: 0, cost: 0 };
+
+        for (let i = 1; i <= daysInMonth; i++) {
+            const date = new Date(Date.UTC(year, monthDate.getUTCMonth(), i));
+            const entry = monthEntries.find(e => e.id === date.toISOString().slice(0, 10));
+            
+            const present = entry?.present[category] || 0;
+            const dailyRice = (present * rates.rice[category]) / 1000;
+            const dailyDalVeg = present * rates.dalVeg[category];
+            const dailyOilCond = present * rates.oilCond[category];
+            const dailySalt = present * rates.salt[category];
+            const dailyFuel = present * rates.fuel[category];
+            
+            totals.present += present; totals.rice += dailyRice; totals.dalVeg += dailyDalVeg;
+            totals.oilCond += dailyOilCond; totals.salt += dailySalt; totals.fuel += dailyFuel;
+            totals.cost += dailyDalVeg + dailyOilCond + dailySalt + dailyFuel;
+
+            body.push([i, present, dailyRice.toFixed(3), dailyDalVeg.toFixed(2), dailyOilCond.toFixed(2), dailySalt.toFixed(2), dailyFuel.toFixed(2), (dailyDalVeg + dailyOilCond + dailySalt + dailyFuel).toFixed(2), entry?.reasonForNoMeal || '']);
+        }
+        
+        const foot = [['Total', totals.present, totals.rice.toFixed(3), totals.dalVeg.toFixed(2), totals.oilCond.toFixed(2), totals.salt.toFixed(2), totals.fuel.toFixed(2), totals.cost.toFixed(2), '']];
+        
+        doc.autoTable({
+            startY: 40, head, body, foot, theme: 'grid', styles: { fontSize: 7 },
+            headStyles: { fillColor: [245, 158, 11], textColor: [255, 255, 255] },
+            footStyles: { fillColor: [252, 211, 77] },
+            columnStyles: { 8: { cellWidth: 40 } }
+        });
+        
+        doc.setFontSize(8);
+        doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, 14, doc.internal.pageSize.getHeight() - 10);
+        doc.text('Created from PM Poshan Track App by Imran Gani Mugloo, Teacher Zone Vailoo', doc.internal.pageSize.getWidth() - 14, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
+    });
+
+    return doc.output('datauristring');
+};
+
+export const generatePDFReport = (reportType: string, data: AppData, selectedMonth: string): { dataUri: string, filename: string } => {
+    let dataUri: string;
+    let filename: string;
+    const schoolName = data.settings.schoolDetails.name.replace(/\s+/g, '_');
+    const monthFormatted = selectedMonth.replace('-', '_');
+
+    try {
+        switch (reportType) {
+            case 'roll_statement':
+                dataUri = generateRollStatementReport(data);
+                filename = `Roll_Statement_${schoolName}.pdf`;
+                break;
+            case 'daily_consumption':
+                dataUri = generateDailyConsumptionReport(data, selectedMonth);
+                filename = `Daily_Consumption_${schoolName}_${monthFormatted}.pdf`;
+                break;
+            case 'mdcf':
+                dataUri = generateMDCFReport(data, selectedMonth);
+                filename = `MDCF_Report_${schoolName}_${monthFormatted}.pdf`;
+                break;
+            default:
+                throw new Error('Unknown report type');
+        }
+        return { dataUri, filename };
+    } catch (error) {
+        console.error("Error generating PDF:", error);
+        throw new Error("Failed to generate PDF. Check console for details.");
     }
 };
