@@ -73,7 +73,11 @@ const Dashboard: React.FC = () => {
     }, [data.entries, displayedMonthKey]);
 
     const generateInsight = async () => {
-        if (!process.env.API_KEY) {
+        const apiKey = (typeof process !== 'undefined' && process.env && process.env.API_KEY)
+            ? process.env.API_KEY
+            : undefined;
+
+        if (!apiKey) {
             showToast('AI features are not configured.', 'error');
             setAiInsight('Error: API key is missing. This needs to be configured by the developer.');
             return;
@@ -83,7 +87,7 @@ const Dashboard: React.FC = () => {
         setAiInsight('');
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = new GoogleGenAI({ apiKey: apiKey });
             
             const monthName = new Date(displayedMonthKey + '-02T00:00:00').toLocaleString('default', { month: 'long' });
             const mealDays = monthlyData.filter(d => d.total > 0).length;
