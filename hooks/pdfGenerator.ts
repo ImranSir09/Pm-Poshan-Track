@@ -269,10 +269,11 @@ const generateNewDailyConsumptionReport = (data: AppData, month: string) => {
         return acc;
     }, {} as Record<Category, number>);
 
-    categories.forEach((category, index) => {
+    let firstPageDrawn = false;
+    categories.forEach((category) => {
         if (onRolls[category] === 0) return; // Skip departments with no students
 
-        if (index > 0) {
+        if (firstPageDrawn) {
             doc.addPage();
         }
 
@@ -292,7 +293,7 @@ const generateNewDailyConsumptionReport = (data: AppData, month: string) => {
         doc.setFont('helvetica', 'italic');
         const totalCost = (rates.dalVeg[category] + rates.salt[category] + rates.oilCond[category] + rates.fuel[category]).toFixed(2);
         doc.text(
-            `Rates per student: Rice @ ${(rates.rice[category] / 1000).toFixed(3)} kg | Cooking Cost @ Rs.${totalCost}`,
+            `Rates per student: Rice @ ${(rates.rice[category] / 1000).toFixed(3)} kg | Cooking Cost @ Rs ${totalCost}`,
             14, 30
         );
         
@@ -353,11 +354,11 @@ const generateNewDailyConsumptionReport = (data: AppData, month: string) => {
         doc.autoTable({
             head: [['Abstract of Rice', 'Abstract of Cash']],
             body: [
-                [`1. Opening Balance:-   ${riceAbstract.opening.toFixed(3)} Kg`, `1. Opening Balance:-   Rs. ${cashAbstract.opening.toFixed(2)}`],
-                [`2. Quantity received:- ${riceAbstract.received.toFixed(3)} Kg`, `2. Amount received:-   Rs. ${cashAbstract.received.toFixed(2)}`],
-                [`3. Total Quantity:-    ${riceAbstract.total.toFixed(3)} Kg`, `3. Total Amount:-      Rs. ${cashAbstract.total.toFixed(2)}`],
-                [`4. Rice Consumed:-     ${riceAbstract.consumed?.toFixed(3)} Kg`, `4. Expenditure:-       Rs. ${cashAbstract.expenditure?.toFixed(2)}`],
-                [`5. Closing Balance:-   ${riceAbstract.balance.toFixed(3)} Kg`, `5. Closing Balance:-   Rs. ${cashAbstract.balance.toFixed(2)}`],
+                [`1. Opening Balance:-   ${riceAbstract.opening.toFixed(3)} Kg`, `1. Opening Balance:-   Rs ${cashAbstract.opening.toFixed(2)}`],
+                [`2. Quantity received:- ${riceAbstract.received.toFixed(3)} Kg`, `2. Amount received:-   Rs ${cashAbstract.received.toFixed(2)}`],
+                [`3. Total Quantity:-    ${riceAbstract.total.toFixed(3)} Kg`, `3. Total Amount:-      Rs ${cashAbstract.total.toFixed(2)}`],
+                [`4. Rice Consumed:-     ${riceAbstract.consumed?.toFixed(3)} Kg`, `4. Expenditure:-       Rs ${cashAbstract.expenditure?.toFixed(2)}`],
+                [`5. Closing Balance:-   ${riceAbstract.balance.toFixed(3)} Kg`, `5. Closing Balance:-   Rs ${cashAbstract.balance.toFixed(2)}`],
             ],
             startY: doc.lastAutoTable.finalY + 5,
             theme: 'grid',
@@ -367,6 +368,8 @@ const generateNewDailyConsumptionReport = (data: AppData, month: string) => {
         
         doc.setFontSize(8);
         doc.text('created from pm poshan track app by Imran Gani Mugloo Teacher Zone Vailoo', doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 5, { align: 'center' });
+
+        firstPageDrawn = true;
     });
 
     const filename = `DailyConsumption_${schoolDetails.name.replace(/\s+/g, '_')}_${month}.pdf`;
