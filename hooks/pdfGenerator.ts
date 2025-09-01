@@ -12,7 +12,7 @@ interface jsPDF {
 declare const jspdf: any;
 
 const generateNewMDCFReport = (data: AppData, month: string) => {
-    const doc = new jspdf.jsPDF() as jsPDF;
+    const doc = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) as jsPDF;
     const { settings, entries } = data;
     const { schoolDetails, healthStatus, inspectionReport, cooks } = settings;
 
@@ -219,7 +219,7 @@ const generateNewMDCFReport = (data: AppData, month: string) => {
 };
 
 const generateNewDailyConsumptionReport = (data: AppData, month: string) => {
-    const doc = new jspdf.jsPDF({ orientation: 'landscape' }) as jsPDF;
+    const doc = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) as jsPDF;
     const { settings } = data;
     const { schoolDetails, rates } = settings;
 
@@ -267,19 +267,21 @@ const generateNewDailyConsumptionReport = (data: AppData, month: string) => {
         
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
-        doc.text(`Month: ${monthName}`, 14, 25);
-        doc.text(`Year: ${yearName}`, 140, 25);
-        doc.text(`Department: ${departmentMap[category]}`, 230, 25);
+        const pageWidth = doc.internal.pageSize.getWidth();
+        doc.text(`Month: ${monthName} ${yearName}`, 14, 25);
+        doc.text(`Department: ${departmentMap[category]}`, pageWidth - 14, 25, { align: 'right' });
         
-        const rateText = `Rates/Student → @ ${(rates.rice[category] / 1000).toFixed(3)}kg @ ₹${rates.dalVeg[category].toFixed(2)} @ ₹${rates.salt[category].toFixed(2)} @ ₹${rates.oilCond[category].toFixed(2)} @ ₹${rates.fuel[category].toFixed(2)} @ ₹${(rates.dalVeg[category] + rates.salt[category] + rates.oilCond[category] + rates.fuel[category]).toFixed(2)}`;
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        const totalCost = (rates.dalVeg[category] + rates.salt[category] + rates.oilCond[category] + rates.fuel[category]).toFixed(2);
+        doc.text(
+            `Rates per student: Rice @ ${(rates.rice[category] / 1000).toFixed(3)} kg | Cooking Cost @ ₹${totalCost}`,
+            14, 30
+        );
         
-        const head = [[
-            'S.No', 'Date', 'Roll', 'Present', 'FG Srv', 'FG Used', 'Dal Veg', 'Salt Cond', 'Fat Oil', 'Fuel', 'Total', 'Sign'
-        ], [
-            { content: rateText, colSpan: 12, styles: { halign: 'left', fontStyle: 'italic', fillColor: [245, 245, 245] }}
-        ]];
+        const head = [['S.No', 'Date', 'Roll', 'Present', 'Rice (kg)', 'Dal/Veg', 'Salt', 'Oil/Cond', 'Fuel', 'Total (₹)']];
         
-        const body = [];
+        const body: any[] = [];
         const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
         
         for (let i = 1; i <= daysInMonth; i++) {
@@ -294,7 +296,7 @@ const generateNewDailyConsumptionReport = (data: AppData, month: string) => {
             const entry = summary.monthEntries.find(e => e.id === dateString);
 
             if (date.getDay() === 0) { // Sunday
-                body.push([i, date.toLocaleDateString('en-GB'), '', '', { content: 'Sunday', colSpan: 8, styles: { halign: 'center' } }]);
+                body.push([i, date.toLocaleDateString('en-GB'), '', '', { content: 'Sunday', colSpan: 6, styles: { halign: 'center' } }]);
             } else if (entry) {
                 const present = entry.present[category];
                 const fgUsed = (present * rates.rice[category]) / 1000;
@@ -305,22 +307,24 @@ const generateNewDailyConsumptionReport = (data: AppData, month: string) => {
                 const total = dalVeg + salt + oilCond + fuel;
                 
                 body.push([
-                    i, date.toLocaleDateString('en-GB'), onRolls[category], present, '',
+                    i,
+                    date.toLocaleDateString('en-GB'),
+                    onRolls[category],
+                    present,
                     present > 0 ? fgUsed.toFixed(3) : '0.000',
                     present > 0 ? dalVeg.toFixed(2) : '0.00',
                     present > 0 ? salt.toFixed(2) : '0.00',
                     present > 0 ? oilCond.toFixed(2) : '0.00',
                     present > 0 ? fuel.toFixed(2) : '0.00',
                     present > 0 ? total.toFixed(2) : '0.00',
-                    ''
                 ]);
             } else {
-                 body.push([i, date.toLocaleDateString('en-GB'), onRolls[category], 0, '', '0.000', '0.00', '0.00', '0.00', '0.00', '0.00', '']);
+                 body.push([i, date.toLocaleDateString('en-GB'), onRolls[category], 0, '0.000', '0.00', '0.00', '0.00', '0.00', '0.00']);
             }
         }
         
         doc.autoTable({
-            head, body, startY: 28, theme: 'grid',
+            head, body, startY: 34, theme: 'grid',
             styles: { fontSize: 8, halign: 'center' },
             headStyles: { fontStyle: 'bold' }
         });
@@ -352,7 +356,7 @@ const generateNewDailyConsumptionReport = (data: AppData, month: string) => {
 };
 
 const generateRollStatementReport = (data: AppData) => {
-    const doc = new jspdf.jsPDF() as jsPDF;
+    const doc = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) as jsPDF;
     const { settings } = data;
     const { schoolDetails, classRolls } = settings;
 
