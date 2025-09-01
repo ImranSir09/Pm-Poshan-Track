@@ -109,7 +109,7 @@ const DataManagement: React.FC = () => {
                 <Card title="Export Reports">
                     <div className="space-y-3">
                         <div>
-                            <label htmlFor="report-type" className="block text-xs font-medium mb-1 text-stone-600 dark:text-gray-300">Select Report Type</label>
+                            <label htmlFor="report-type" className="block text-xs font-medium mb-1 text-stone-600 dark:text-gray-300">Report Type</label>
                             <select 
                                 id="report-type" 
                                 value={reportType} 
@@ -138,7 +138,7 @@ const DataManagement: React.FC = () => {
                                 <span className="flex items-center justify-center">
                                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 * 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
                                     Generating...
                                 </span>
@@ -168,6 +168,36 @@ const DataManagement: React.FC = () => {
                 <Card title="Reset Application">
                     <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">This will permanently delete all entries, receipts, and settings, resetting the app to its initial state. Use with caution.</p>
                     <Button onClick={() => setResetModalOpen(true)} variant="danger" className="w-full">Reset All Data</Button>
+                </Card>
+
+                <Card title="Help & About">
+                    <div className="space-y-4 text-sm text-stone-600 dark:text-gray-300">
+                        <div>
+                            <h3 className="font-semibold text-amber-700 dark:text-amber-400">App Guide</h3>
+                            <p className="text-xs text-stone-500 dark:text-gray-400 mt-1">
+                                Here’s a quick guide to the app's functions:
+                            </p>
+                            <ul className="list-disc list-inside space-y-1 mt-2 text-xs">
+                                <li><b>Dashboard:</b> Your daily hub. Add/edit today's meal entry and see a monthly overview at a glance.</li>
+                                <li><b>Summary:</b> View detailed monthly breakdowns of consumption, expenditure, and stock balances.</li>
+                                <li><b>Receipts:</b> Log all incoming rice and cash to keep your stock and fund records accurate.</li>
+                                <li><b>Settings:</b> Crucial for accuracy! Configure your school details, student enrollment, and food rates here before you start.</li>
+                                <li><b>Data:</b> Generate PDF reports, back up your data to a file, or restore from a backup.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-amber-700 dark:text-amber-400">Feedback & Support</h3>
+                            <p className="text-xs text-stone-500 dark:text-gray-400 mt-1">
+                                Have questions or suggestions? Your feedback is valuable! Please get in touch.
+                            </p>
+                        </div>
+                        <div className="text-xs pt-2 border-t border-amber-200/50 dark:border-white/10">
+                            <p><strong>App Version:</strong> 1.2.0</p>
+                            <p><strong>Developer:</strong> Emraan Mugloo</p>
+                            <p><strong>Contact:</strong> <a href="tel:+919149690096" className="text-amber-600 dark:text-amber-400 hover:underline">+91 9149690096</a></p>
+                            <p><strong>Email:</strong> <a href="mailto:emraanmugloo123@gmail.com" className="text-amber-600 dark:text-amber-400 hover:underline">emraanmugloo123@gmail.com</a></p>
+                        </div>
+                    </div>
                 </Card>
             </div>
         </>

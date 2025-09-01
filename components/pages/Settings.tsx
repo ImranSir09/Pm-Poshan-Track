@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { nanoid } from 'nanoid';
 import { Accordion, AccordionItem } from '../ui/Accordion';
@@ -8,6 +7,7 @@ import { useData } from '../../hooks/useData';
 import { Settings, SchoolDetails, Rates, Category, CookCumHelper, ClassRoll, MonthlyBalanceData, MDMIncharge, NotificationSettings } from '../../types';
 import { useToast } from '../../hooks/useToast';
 import { CLASS_STRUCTURE } from '../../constants';
+import { indianStates, jkDistrictsWithZones } from '../../data/locations';
 
 
 const calculateSectionTotals = (classes: ClassRoll[]) => {
@@ -46,11 +46,35 @@ const SettingsPage: React.FC = () => {
     const { showToast } = useToast();
     const [isUdiseValid, setIsUdiseValid] = useState(settings.schoolDetails.udise.length === 11 || settings.schoolDetails.udise.length === 0);
 
+    const availableDistricts = useMemo(() => {
+        const selectedStateData = indianStates.find(s => s.name === settings.schoolDetails.state);
+        return selectedStateData ? selectedStateData.districts.sort() : [];
+    }, [settings.schoolDetails.state]);
+
+    const availableZones = useMemo(() => {
+        if (settings.schoolDetails.state !== 'Jammu and Kashmir') {
+            return [];
+        }
+        const selectedDistrictData = jkDistrictsWithZones.find(d => d.name === settings.schoolDetails.district);
+        return selectedDistrictData ? selectedDistrictData.zones.sort() : [];
+    }, [settings.schoolDetails.state, settings.schoolDetails.district]);
+
     const handleSchoolDetailsChange = (field: keyof SchoolDetails, value: string) => {
         if (field === 'udise') {
             setIsUdiseValid(value.length === 11 || value.length === 0);
         }
-        setSettings(prev => ({...prev, schoolDetails: {...prev.schoolDetails, [field]: value}}));
+        
+        const newSchoolDetails = { ...settings.schoolDetails, [field]: value };
+        
+        if (field === 'state') {
+            newSchoolDetails.district = '';
+            newSchoolDetails.block = ''; // Reset block when state changes
+        }
+         if (field === 'district') {
+            newSchoolDetails.block = ''; // Reset block when district changes
+        }
+
+        setSettings(prev => ({ ...prev, schoolDetails: newSchoolDetails }));
     }
 
     const handleInchargeChange = (field: keyof MDMIncharge, value: string) => {
@@ -172,16 +196,16 @@ const SettingsPage: React.FC = () => {
 
 
     return (
-        <div className="pb-20">
+        <div className="pb-32">
             <div className="space-y-4">
                 <Accordion defaultOpenId="general">
                     <AccordionItem id="general" title="General & MDM Details">
                         <div className="space-y-4">
                             <div>
                                 <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-2">School Information</h3>
-                                <div className="space-y-3">
-                                    <Input label="School Name" id="schoolName" value={settings.schoolDetails.name} onChange={e => handleSchoolDetailsChange('name', e.target.value)} />
-                                    <div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <Input containerClassName="md:col-span-2" label="School Name" id="schoolName" value={settings.schoolDetails.name} onChange={e => handleSchoolDetailsChange('name', e.target.value)} />
+                                    <div className="md:col-span-2">
                                         <Input 
                                             label="UDISE Code (11 digits)" 
                                             id="udise" 
@@ -193,6 +217,58 @@ const SettingsPage: React.FC = () => {
                                         />
                                         {!isUdiseValid && <p className="mt-1 text-xs text-red-500 dark:text-red-400">UDISE code must be 11 digits long.</p>}
                                     </div>
+                                    <Input label="School Type" id="schoolType" value={settings.schoolDetails.type} onChange={e => handleSchoolDetailsChange('type', e.target.value)} />
+                                    <Input label="School Category" id="schoolCategory" value={settings.schoolDetails.category} onChange={e => handleSchoolDetailsChange('category', e.target.value)} />
+                                    <Input label="Kitchen Type" id="kitchenType" value={settings.schoolDetails.kitchenType} onChange={e => handleSchoolDetailsChange('kitchenType', e.target.value)} />
+                                    <div>
+                                        <label htmlFor="state" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">State</label>
+                                        <select
+                                            id="state"
+                                            value={settings.schoolDetails.state}
+                                            onChange={e => handleSchoolDetailsChange('state', e.target.value)}
+                                            className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5"
+                                        >
+                                            <option value="">Select State</option>
+                                            {indianStates.map(state => (
+                                                <option key={state.name} value={state.name}>{state.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label htmlFor="district" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">District</label>
+                                        <select
+                                            id="district"
+                                            value={settings.schoolDetails.district}
+                                            onChange={e => handleSchoolDetailsChange('district', e.target.value)}
+                                            disabled={!settings.schoolDetails.state || availableDistricts.length === 0}
+                                            className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <option value="">Select District</option>
+                                            {availableDistricts.map(district => (
+                                                <option key={district} value={district}>{district}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                     {settings.schoolDetails.state === 'Jammu and Kashmir' ? (
+                                        <div>
+                                            <label htmlFor="block" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Block/Educational Zone</label>
+                                            <select
+                                                id="block"
+                                                value={settings.schoolDetails.block}
+                                                onChange={e => handleSchoolDetailsChange('block', e.target.value)}
+                                                disabled={!settings.schoolDetails.district || availableZones.length === 0}
+                                                className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                <option value="">Select Zone</option>
+                                                {availableZones.map(zone => (
+                                                    <option key={zone} value={zone}>{zone}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    ) : (
+                                        <Input label="Block" id="block" value={settings.schoolDetails.block} onChange={e => handleSchoolDetailsChange('block', e.target.value)} />
+                                    )}
+                                    <Input label="Village/Ward" id="village" value={settings.schoolDetails.village} onChange={e => handleSchoolDetailsChange('village', e.target.value)} />
                                 </div>
                             </div>
 
@@ -390,68 +466,71 @@ const SettingsPage: React.FC = () => {
                                                 <div>
                                                     <label className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Gender</label>
                                                     <select value={cook.gender} onChange={e => handleCookChange(cook.id, 'gender', e.target.value)} className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg p-2.5 focus:ring-amber-500 focus:border-amber-500">
-                                                        <option>Female</option><option>Male</option><option>Other</option>
+                                                        <option value="Male">Male</option>
+                                                        <option value="Female">Female</option>
+                                                        <option value="Other">Other</option>
                                                     </select>
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Category</label>
                                                     <select value={cook.category} onChange={e => handleCookChange(cook.id, 'category', e.target.value)} className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg p-2.5 focus:ring-amber-500 focus:border-amber-500">
-                                                        <option>GEN</option><option>OBC</option><option>SC</option><option>ST</option>
+                                                        <option value="GEN">GEN</option>
+                                                        <option value="OBC">OBC</option>
+                                                        <option value="SC">SC</option>
+                                                        <option value="ST">ST</option>
                                                     </select>
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-2">
-                                                <div>
-                                                    <label className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Payment</label>
+                                                 <div>
+                                                    <label className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Payment Mode</label>
                                                     <select value={cook.paymentMode} onChange={e => handleCookChange(cook.id, 'paymentMode', e.target.value)} className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg p-2.5 focus:ring-amber-500 focus:border-amber-500">
-                                                        <option>Bank</option><option>Cash</option><option>Cheque</option>
+                                                        <option value="Bank">Bank</option>
+                                                        <option value="Cash">Cash</option>
+                                                        <option value="Cheque">Cheque</option>
                                                     </select>
                                                 </div>
-                                                <Input label="Amount Paid" type="number" id={`cook-amount-${cook.id}`} value={cook.amountPaid} onChange={e => handleCookChange(cook.id, 'amountPaid', parseFloat(e.target.value) || 0)} />
+                                                <Input label="Amount Paid (₹)" id={`cook-amount-${cook.id}`} type="number" value={cook.amountPaid} onChange={e => handleCookChange(cook.id, 'amountPaid', parseFloat(e.target.value) || 0)} />
                                             </div>
                                         </div>
                                     ))}
-                                    <Button variant="secondary" onClick={addCook} className="w-full">Add Cook</Button>
+                                </div>
+                                <Button onClick={addCook} variant="secondary" className="w-full mt-3">Add Cook</Button>
+                            </div>
+
+                            <div>
+                                <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-2">Health Status</h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Input label="IFA Tablets (Boys)" id="ifa-boys" type="number" value={settings.healthStatus.ifaBoys} onChange={e => handleHealthChange('ifaBoys', e.target.value)} />
+                                    <Input label="IFA Tablets (Girls)" id="ifa-girls" type="number" value={settings.healthStatus.ifaGirls} onChange={e => handleHealthChange('ifaGirls', e.target.value)} />
+                                    <Input label="Screened by RBSK Team" id="screened-rbsk" type="number" value={settings.healthStatus.screenedByRBSK} onChange={e => handleHealthChange('screenedByRBSK', e.target.value)} />
+                                    <Input label="Referred by RBSK Team" id="referred-rbsk" type="number" value={settings.healthStatus.referredByRBSK} onChange={e => handleHealthChange('referredByRBSK', e.target.value)} />
                                 </div>
                             </div>
+
                             <div>
-                                <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-2">Health & Inspection Report</h3>
+                                <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-2">Inspection Report</h3>
                                 <div className="space-y-3">
-                                    <fieldset className="border border-amber-300/50 dark:border-gray-600 rounded-lg p-3">
-                                        <legend className="text-sm font-medium text-amber-700 dark:text-amber-400 px-1">IFA Tablet Beneficiaries</legend>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <Input label="Boys" id="ifa-boys" type="number" value={settings.healthStatus.ifaBoys} onChange={e => handleHealthChange('ifaBoys', e.target.value)} />
-                                            <Input label="Girls" id="ifa-girls" type="number" value={settings.healthStatus.ifaGirls} onChange={e => handleHealthChange('ifaGirls', e.target.value)} />
-                                        </div>
-                                    </fieldset>
-                                    <fieldset className="border border-amber-300/50 dark:border-gray-600 rounded-lg p-3">
-                                        <legend className="text-sm font-medium text-amber-700 dark:text-amber-400 px-1">RBSK Team</legend>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <Input label="Screened by RBSK" id="rbsk-screened" type="number" value={settings.healthStatus.screenedByRBSK} onChange={e => handleHealthChange('screenedByRBSK', e.target.value)} />
-                                            <Input label="Referred by RBSK" id="rbsk-referred" type="number" value={settings.healthStatus.referredByRBSK} onChange={e => handleHealthChange('referredByRBSK', e.target.value)} />
-                                        </div>
-                                    </fieldset>
-                                    
                                     <div className="flex items-center justify-between p-3 bg-amber-100/50 dark:bg-gray-800/50 rounded-lg">
-                                        <label className="font-medium text-stone-700 dark:text-gray-300">Inspection Done This Month?</label>
+                                        <div>
+                                            <label htmlFor="inspected" className="font-medium text-stone-700 dark:text-gray-300">Was an inspection done this month?</label>
+                                        </div>
                                         <label className="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" className="sr-only peer" checked={settings.inspectionReport.inspected} onChange={e => handleInspectionChange('inspected', e.target.checked)} />
+                                            <input type="checkbox" id="inspected" className="sr-only peer" checked={settings.inspectionReport.inspected} onChange={e => handleInspectionChange('inspected', e.target.checked)} />
                                             <div className="w-11 h-6 bg-stone-200 dark:bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-amber-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
                                         </label>
                                     </div>
-                                    <Input label="Number of Untoward Incidents" id="incidents" type="number" value={settings.inspectionReport.incidentsCount} onChange={e => handleInspectionChange('incidentsCount', e.target.value)} />
+                                    <Input label="Number of untoward incidents" id="incidents" type="number" value={settings.inspectionReport.incidentsCount} onChange={e => handleInspectionChange('incidentsCount', e.target.value)} />
                                 </div>
                             </div>
                         </div>
                     </AccordionItem>
                 </Accordion>
             </div>
-            <div className="fixed bottom-20 left-0 right-0 z-20 max-w-2xl mx-auto">
-                 <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md p-2 border-t border-amber-200/50 dark:border-white/20">
-                     <Button onClick={handleSave} className="w-full">
-                         Save All Settings
-                     </Button>
-                 </div>
+            <div className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-amber-200/50 dark:border-white/20">
+                <div className="max-w-2xl mx-auto">
+                    <Button onClick={handleSave} className="w-full">Save All Settings</Button>
+                </div>
             </div>
         </div>
     );

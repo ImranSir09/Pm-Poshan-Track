@@ -1,10 +1,6 @@
-// FIX: The type definition for 'jspdf' is missing. Removing the problematic type reference and import,
-// and defining a local interface for jsPDF. This allows the file to compile without
-// relying on external type definitions that may not be available in the environment.
-// /// <reference types="jspdf" />
-// import { jsPDF } from 'jspdf';
+
 import 'jspdf-autotable';
-import { AppData, Settings, Category, AbstractData } from '../types';
+import { AppData, Settings, Category, ClassRoll } from '../types';
 import { calculateMonthlySummary, getOpeningBalanceForMonth } from '../services/summaryCalculator';
 
 // A local, partial interface for jsPDF to work around missing type definitions.
@@ -63,15 +59,16 @@ const generateDailyConsumptionReport = (data: AppData, month: string) => {
     const { settings, entries } = data;
     const { schoolDetails } = settings;
 
-    const monthDate = new Date(`${month}-02T00:00:00`);
-    const monthName = monthDate.toLocaleString('default', { month: 'long' });
-    const year = monthDate.getFullYear();
-    const daysInMonth = new Date(year, monthDate.getMonth() + 1, 0).getDate();
+    // Use UTC to prevent timezone issues
+    const monthDate = new Date(`${month}-02T00:00:00Z`);
+    const monthName = monthDate.toLocaleString('en-IN', { month: 'long', timeZone: 'UTC' });
+    const year = monthDate.getUTCFullYear();
+    const daysInMonth = new Date(year, monthDate.getUTCMonth() + 1, 0).getUTCDate();
 
     const categoriesInfo = [
-        { key: 'balvatika' as Category, name: 'Pre-Primary' },
+        { key: 'balvatika' as Category, name: 'Balvatika' },
         { key: 'primary' as Category, name: 'Primary' },
-        { key: 'middle' as Category, name: 'Upper-Primary' }
+        { key: 'middle' as Category, name: 'Middle' }
     ];
 
     let firstPage = true;
@@ -98,7 +95,7 @@ const generateDailyConsumptionReport = (data: AppData, month: string) => {
         doc.setFont('helvetica', 'bold');
         doc.text(schoolDetails.name, doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' });
         doc.setFontSize(12);
-        doc.text('Daily Consumption Register of Mid-day Meals', doc.internal.pageSize.getWidth() / 2, 18, { align: 'center' });
+        doc.text('Daily Consumption Register', doc.internal.pageSize.getWidth() / 2, 18, { align: 'center' });
         
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
@@ -106,10 +103,10 @@ const generateDailyConsumptionReport = (data: AppData, month: string) => {
         doc.text(`Year: ${year}`, doc.internal.pageSize.getWidth() / 2, 25, { align: 'center' });
         doc.text(`Department: ${departmentName}`, doc.internal.pageSize.getWidth() - 14, 25, { align: 'right' });
         
-        const head1 = ['S.No', 'Date', 'Roll', 'Present', 'FG Srv', 'FG Used', 'Dal Veg', 'Salt Cond', 'Fat Oil', 'Fuel', 'Total', 'Sign'];
+        const head1 = ['S.No', 'Date', 'On Roll', 'Present', 'Foodgrain Served', 'Foodgrain Used (kg)', 'Dal/Veg (₹)', 'Salt/Cond (₹)', 'Fat/Oil (₹)', 'Fuel (₹)', 'Total (₹)', 'Signature'];
         const ratesTotalCost = settings.rates.dalVeg[category] + settings.rates.salt[category] + settings.rates.oilCond[category] + settings.rates.fuel[category];
         const head2 = [
-            { content: 'Rates/Student →', colSpan: 5, styles: { halign: 'right', fontStyle: 'italic', fontSize: 7 } },
+            { content: 'Rates per Student', colSpan: 5, styles: { halign: 'right', fontStyle: 'italic', fontSize: 7 } },
             `@ ${(settings.rates.rice[category]/1000).toFixed(3)}kg`,
             `@₹${settings.rates.dalVeg[category].toFixed(2)}`,
             `@₹${settings.rates.salt[category].toFixed(2)}`,
@@ -121,15 +118,15 @@ const generateDailyConsumptionReport = (data: AppData, month: string) => {
         
         const body: any[] = [];
         for (let i = 1; i <= daysInMonth; i++) {
-            const date = new Date(year, monthDate.getMonth(), i);
+            const date = new Date(Date.UTC(year, monthDate.getUTCMonth(), i));
             const dateString = date.toISOString().slice(0, 10);
-            const formattedDate = date.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            const dayOfWeek = date.getDay();
-            
+            const formattedDate = date.toLocaleDateString('en-IN', { timeZone: 'UTC' });
+            const dayOfWeek = date.getUTCDay();
+
             const entry = entries.find(e => e.id === dateString);
             
-            if (dayOfWeek === 0) {
-                body.push([i, formattedDate, '', '', { content: 'sunday', colSpan: 7, styles: { halign: 'center', fontStyle: 'italic' } }, '']);
+            if (dayOfWeek === 0) { // Sunday
+                body.push([i, formattedDate, '', '', { content: 'Sunday', colSpan: 7, styles: { halign: 'center', fontStyle: 'italic' } }, '']);
             } else if (entry) {
                 const present = entry.present[category];
                 if (present > 0) {
@@ -145,7 +142,7 @@ const generateDailyConsumptionReport = (data: AppData, month: string) => {
                     body.push([i, formattedDate, onRoll, 0, { content: reason, colSpan: 7, styles: { halign: 'center', fontStyle: 'italic', fontSize: 8 } }, '']);
                 }
             } else {
-                body.push([i, formattedDate, onRoll, 0, '', '0.000', '0.00', '0.00', '0.00', '0.00', '0.00', '']);
+                 body.push([i, formattedDate, onRoll, 0, '', '0.000', '0.00', '0.00', '0.00', '0.00', '0.00', '']);
             }
         }
 
@@ -155,333 +152,278 @@ const generateDailyConsumptionReport = (data: AppData, month: string) => {
             startY: 30,
             theme: 'grid',
             styles: { fontSize: 8, cellPadding: 1, halign: 'center', valign: 'middle' },
-            headStyles: { fontStyle: 'bold', fillColor: [220, 220, 220], textColor: 20 },
-            columnStyles: { 1: { halign: 'left' }, 4: { halign: 'left' } },
+            headStyles: { fontStyle: 'bold', fillColor: [220, 220, 220], textColor: 40 },
+            columnStyles: {
+                0: { cellWidth: 10 },
+                1: { cellWidth: 18 },
+                2: { cellWidth: 13 },
+                3: { cellWidth: 13 },
+                4: { cellWidth: 22 },
+            },
+            didDrawCell: (hookData: any) => {
+                if (hookData.column.index > 4 && hookData.row.section === 'head' && hookData.row.index === 0) {
+                    hookData.cell.styles.halign = 'right';
+                }
+            }
         });
-        
+
         const { riceAbstract, cashAbstract } = calculateCategoryAbstract(data, month, category);
         const finalY = doc.lastAutoTable.finalY;
-
-        doc.autoTable({
-            body: [
-                [{ content: 'Abstract of Rice', styles: { fontStyle: 'bold' } }],
-                ['1. Opening Balance:-', { content: `${riceAbstract.opening.toFixed(3)} Kg`, styles: { halign: 'right' } }],
-                ['2. Quantity received:-', { content: `${riceAbstract.received.toFixed(3)} Kg`, styles: { halign: 'right' } }],
-                ['3. Total Quantity:-', { content: `${riceAbstract.total.toFixed(3)} Kg`, styles: { halign: 'right' } }],
-                ['4. Rice Consumed:-', { content: `${riceAbstract.consumed.toFixed(3)} Kg`, styles: { halign: 'right' } }],
-                ['5. Closing Balance:-', { content: `${riceAbstract.closing.toFixed(3)} Kg`, styles: { halign: 'right' } }],
-            ],
-            startY: finalY + 4,
-            theme: 'grid',
-            tableWidth: 95,
-            styles: { fontSize: 9, cellPadding: 1.5 },
-        });
+        
+        doc.setFontSize(10);
+        doc.text('Abstract', 14, finalY + 8);
+        
+        const abstractBody = [
+            ['Opening Balance', `${riceAbstract.opening.toFixed(3)} kg`, `${cashAbstract.opening.toFixed(2)} ₹`],
+            ['Received during month', `${riceAbstract.received.toFixed(3)} kg`, `${cashAbstract.received.toFixed(2)} ₹`],
+            ['Total', `${riceAbstract.total.toFixed(3)} kg`, `${cashAbstract.total.toFixed(2)} ₹`],
+            ['Consumed / Expenditure', `${riceAbstract.consumed.toFixed(3)} kg`, `${cashAbstract.expenditure.toFixed(2)} ₹`],
+            ['Closing Balance', `${riceAbstract.closing.toFixed(3)} kg`, `${cashAbstract.closing.toFixed(2)} ₹`],
+        ];
         
         doc.autoTable({
-            body: [
-                [{ content: 'Abstract of Cash', styles: { fontStyle: 'bold' } }],
-                ['1. Opening Balance:-', { content: `₹ ${cashAbstract.opening.toFixed(2)}`, styles: { halign: 'right' } }],
-                ['2. Amount received:-', { content: `₹ ${cashAbstract.received.toFixed(2)}`, styles: { halign: 'right' } }],
-                ['3. Total Amount:-', { content: `₹ ${cashAbstract.total.toFixed(2)}`, styles: { halign: 'right' } }],
-                ['4. Expenditure:-', { content: `₹ ${cashAbstract.expenditure.toFixed(2)}`, styles: { halign: 'right' } }],
-                ['5. closing balance', { content: `₹ ${cashAbstract.closing.toFixed(2)}`, styles: { halign: 'right' } }],
-            ],
-            startY: finalY + 4,
+            head: [['', 'Foodgrain (Rice)', 'Amount (Cash)']],
+            body: abstractBody,
+            startY: finalY + 10,
             theme: 'grid',
-            tableWidth: 95,
-            margin: { left: 105 },
-            styles: { fontSize: 9, cellPadding: 1.5 },
+            styles: { fontSize: 8, cellPadding: 1.5 },
+            headStyles: { fontStyle: 'bold', fillColor: [220, 220, 220], textColor: 40 },
         });
 
-        const pageHeight = doc.internal.pageSize.getHeight();
-        doc.setFontSize(8);
-        doc.text('- Report generated on PM POSHAN Tracker -', doc.internal.pageSize.getWidth() / 2, pageHeight - 8, { align: 'center' });
+        const signatureY = doc.lastAutoTable.finalY + 15;
+        doc.text('Signature of MDM Incharge', doc.internal.pageSize.getWidth() - 14, signatureY, { align: 'right' });
     }
 
-    const filename = `Daily_Consumption_${schoolDetails.name.replace(/\s/g, '_')}_${month}.pdf`;
-    const dataUri = doc.output('datauristring');
-    return { dataUri, filename };
+    return doc;
 };
 
-const generateRollStatementPDF = (settings: Settings) => {
+
+const generateRollStatementReport = (data: AppData) => {
     const doc = new jspdf.jsPDF() as jsPDF;
-    const { schoolDetails, classRolls } = settings;
-    const pageWidth = doc.internal.pageSize.getWidth();
+    const { settings } = data;
+    const { schoolDetails } = settings;
 
-    // Main Header
-    doc.setFontSize(16);
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Office of the Headmaster ${schoolDetails.name}`, pageWidth / 2, 15, { align: 'center' });
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    const currentYear = new Date().getFullYear();
-    doc.text(`Roll Statement for session ${currentYear}-${currentYear + 1}`, pageWidth / 2, 22, { align: 'center' });
+    doc.text(schoolDetails.name, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+    doc.text('Student Roll Statement', doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
 
-    const head: any[] = [
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`UDISE: ${schoolDetails.udise}`, 14, 30);
+    doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, doc.internal.pageSize.getWidth() - 14, 30, { align: 'right' });
+
+    const head = [
         [
-            { content: 'S. No.', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
-            { content: 'Class', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+            { content: 'Class', rowSpan: 2, styles: { valign: 'middle' } },
             { content: 'General', colSpan: 2, styles: { halign: 'center' } },
             { content: 'ST/SC', colSpan: 2, styles: { halign: 'center' } },
             { content: 'Total', colSpan: 2, styles: { halign: 'center' } },
-            { content: 'On Roll', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+            { content: 'On Roll', rowSpan: 2, styles: { valign: 'middle' } },
         ],
-        [
-            'Boys', 'Girls', // General
-            'Boys', 'Girls', // ST/SC
-            'Boys', 'Girls', // Total
-        ]
+        ['Boys', 'Girls', 'Boys', 'Girls', 'Boys', 'Girls']
     ];
-    
+
     const body: any[] = [];
-    let serial = 1;
+    let grandTotal = { gen_b: 0, gen_g: 0, stsc_b: 0, stsc_g: 0, total_b: 0, total_g: 0, on_roll: 0 };
 
-    const middleClasses = classRolls.filter(c => ['c6','c7','c8'].includes(c.id)).sort((a,b) => b.name.localeCompare(a.name));
-    const primaryClasses = classRolls.filter(c => ['c1','c2','c3','c4','c5'].includes(c.id)).sort((a,b) => b.name.localeCompare(a.name));
-    const prePrimaryClasses = classRolls.filter(c => ['bal','pp1','pp2'].includes(c.id)).sort((a,b) => b.name.localeCompare(a.name));
+    const classOrder = ['c8','c7','c6','c5','c4','c3','c2','c1','pp2','pp1','bal'];
+    const sortedRolls = [...(settings.classRolls || [])].sort((a, b) => classOrder.indexOf(a.id) - classOrder.indexOf(b.id));
+
+    sortedRolls.forEach(cr => {
+        const totalBoys = cr.general.boys + cr.stsc.boys;
+        const totalGirls = cr.general.girls + cr.stsc.girls;
+        const onRoll = totalBoys + totalGirls;
+
+        grandTotal.gen_b += cr.general.boys;
+        grandTotal.gen_g += cr.general.girls;
+        grandTotal.stsc_b += cr.stsc.boys;
+        grandTotal.stsc_g += cr.stsc.girls;
+        grandTotal.total_b += totalBoys;
+        grandTotal.total_g += totalGirls;
+        grandTotal.on_roll += onRoll;
+
+        body.push([cr.name, cr.general.boys, cr.general.girls, cr.stsc.boys, cr.stsc.girls, totalBoys, totalGirls, onRoll]);
+    });
     
-    const calculateSectionTotals = (classes: any[]) => {
-        return classes.reduce((acc, cr) => {
-            acc.gen_b += cr.general.boys; acc.gen_g += cr.general.girls;
-            acc.stsc_b += cr.stsc.boys; acc.stsc_g += cr.stsc.girls;
-            return acc;
-        }, { gen_b: 0, gen_g: 0, stsc_b: 0, stsc_g: 0 });
-    };
-
-    const addSection = (title: string, classes: any[]) => {
-        if (classes.length === 0) return;
-
-        body.push([{ content: title, colSpan: 9, styles: { fontStyle: 'bold', fillColor: [230, 230, 230], textColor: 0, halign: 'left' } }]);
-        
-        classes.forEach(cr => {
-            const totalBoys = cr.general.boys + cr.stsc.boys;
-            const totalGirls = cr.general.girls + cr.stsc.girls;
-            body.push([
-                serial++, cr.name,
-                cr.general.boys, cr.general.girls,
-                cr.stsc.boys, cr.stsc.girls,
-                totalBoys, totalGirls,
-                totalBoys + totalGirls,
-            ]);
-        });
-
-        const totals = calculateSectionTotals(classes);
-        const totalBoys = totals.gen_b + totals.stsc_b;
-        const totalGirls = totals.gen_g + totals.stsc_g;
-        body.push([
-            { content: `Total (${title.split(' ')[0]})`, colSpan: 2, styles: { halign: 'center', fontStyle: 'bold' } },
-            totals.gen_b, totals.gen_g, totals.stsc_b, totals.stsc_g,
-            totalBoys, totalGirls, totalBoys + totalGirls,
-        ]);
-    };
-
-    addSection('Middle Section (VI-VIII)', middleClasses);
-    addSection('Primary Section (I-V)', primaryClasses);
-    addSection('Pre-Primary Section', prePrimaryClasses);
-
-    const grandTotal = calculateSectionTotals(classRolls);
-    const grandTotalBoys = grandTotal.gen_b + grandTotal.stsc_b;
-    const grandTotalGirls = grandTotal.gen_g + grandTotal.stsc_g;
-    const grandOnRoll = grandTotalBoys + grandTotalGirls;
+    body.push([
+        { content: 'Grand Total', styles: { fontStyle: 'bold' } },
+        { content: grandTotal.gen_b, styles: { fontStyle: 'bold' } },
+        { content: grandTotal.gen_g, styles: { fontStyle: 'bold' } },
+        { content: grandTotal.stsc_b, styles: { fontStyle: 'bold' } },
+        { content: grandTotal.stsc_g, styles: { fontStyle: 'bold' } },
+        { content: grandTotal.total_b, styles: { fontStyle: 'bold' } },
+        { content: grandTotal.total_g, styles: { fontStyle: 'bold' } },
+        { content: grandTotal.on_roll, styles: { fontStyle: 'bold' } },
+    ]);
 
     doc.autoTable({
-        startY: 28,
         head: head,
         body: body,
+        startY: 35,
         theme: 'grid',
-        styles: { fontSize: 10, cellPadding: 2, halign: 'center' },
-        headStyles: { fillColor: [220, 220, 220], textColor: 20, fontStyle: 'bold' },
-        didParseCell: (data: any) => {
-             if (data.cell.raw.content?.toString().startsWith('Total')) {
-                data.cell.styles.fillColor = [240, 240, 240];
-                data.cell.styles.fontStyle = 'bold';
-            }
-        },
-        foot: [[
-            { content: 'Grand Total', colSpan: 2, styles: { halign: 'center', fontStyle: 'bold' } },
-            grandTotal.gen_b, grandTotal.gen_g,
-            grandTotal.stsc_b, grandTotal.stsc_g,
-            grandTotalBoys, grandTotalGirls,
-            grandOnRoll
-        ]],
-        footStyles: { fontStyle: 'bold', fillColor: [220, 220, 220], textColor: 20 }
+        styles: { halign: 'center' },
+        headStyles: { fontStyle: 'bold', fillColor: [220, 220, 220], textColor: 40 },
     });
+    
+    const finalY = doc.lastAutoTable.finalY;
+    doc.text('Signature of MDM Incharge', doc.internal.pageSize.getWidth() - 14, finalY + 15, { align: 'right' });
 
-    const filename = `Roll_Statement_${settings.schoolDetails.name.replace(/\s/g, '_')}.pdf`;
-    const dataUri = doc.output('datauristring');
-    return { dataUri, filename };
+    return doc;
 };
 
 
-const generateMDCFReport = (data: AppData, selectedMonth: string) => {
-    const { settings } = data;
-    const { monthEntries, riceAbstracts, cashAbstracts, categoryTotals } = calculateMonthlySummary(data, selectedMonth);
-    
-    if (monthEntries.length === 0) {
-        throw new Error('No data available for the selected month to generate MDCF report.');
-    }
-    
+const generateMDCFReport = (data: AppData, month: string) => {
     const doc = new jspdf.jsPDF() as jsPDF;
-    const { schoolDetails, cooks, healthStatus, inspectionReport } = settings;
-    const monthDate = new Date(`${selectedMonth}-02`);
-    const monthName = monthDate.toLocaleString('default', { month: 'long' });
-    const year = monthDate.getFullYear();
-
-    let finalY = 0;
-    let startY;
-    const pageMargin = 14;
-    const pageWidth = doc.internal.pageSize.getWidth();
-
-    const addSectionTitle = (title: string, y: number) => {
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.text(title, pageMargin, y);
-        return y + 3;
-    };
+    const { settings } = data;
+    const { schoolDetails, healthStatus, inspectionReport, cooks } = settings;
+    
+    const summary = calculateMonthlySummary(data, month);
+    const { riceAbstracts, cashAbstracts, categoryTotals } = summary;
+    
+    // Use UTC to prevent timezone issues
+    const monthDate = new Date(`${month}-02T00:00:00Z`);
+    const monthName = monthDate.toLocaleString('en-IN', { month: 'long', timeZone: 'UTC' });
+    const year = monthDate.getUTCFullYear();
     
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('PM-POSHAN (Mid-Day Meal Scheme)', pageWidth / 2, 12, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text('Monthly Data Collection Format (MDCF)', pageWidth / 2, 18, { align: 'center' });
+    doc.text('Monthly Data Collection Format (MDCF)', doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`School: ${schoolDetails.name}`, pageMargin, 25);
-    doc.text(`UDISE: ${schoolDetails.udise}`, pageWidth / 2, 25, { align: 'center' });
-    doc.text(`Month: ${monthName} ${year}`, pageWidth - pageMargin, 25, { align: 'right' });
-
-    doc.autoTable({
-        startY: 28,
-        theme: 'grid',
-        body: [
-            ['School Type', schoolDetails.type, 'School Category', schoolDetails.category],
-            ['Kitchen Type', schoolDetails.kitchenType, 'State/UT', schoolDetails.state],
-            ['District', schoolDetails.district, 'Block/NP', schoolDetails.block],
-            ['Village/Ward', schoolDetails.village, '', ''],
-        ],
-        styles: { fontSize: 9, cellPadding: 2 },
-    });
-    finalY = doc.lastAutoTable.finalY;
-
-    startY = addSectionTitle('2. Meals Availed Status', finalY + 8);
-    doc.autoTable({
-        startY,
-        theme: 'grid',
-        head: [['Category', 'School Days', 'MDM Days', 'Total Meals']],
-        body: [
-            ['Balvatika', monthEntries.length, monthEntries.length, categoryTotals.present.balvatika],
-            ['Primary', monthEntries.length, monthEntries.length, categoryTotals.present.primary],
-            ['Middle', monthEntries.length, monthEntries.length, categoryTotals.present.middle],
-        ],
-        styles: { fontSize: 9, cellPadding: 2, halign: 'center' },
-        headStyles: { fillColor: [41, 128, 185], textColor: 255, halign: 'center' },
-    });
-    finalY = doc.lastAutoTable.finalY;
-
-    startY = addSectionTitle('3. Fund Details (in Rs.)', finalY + 8);
-    doc.autoTable({
-        startY,
-        head: [['Category', 'Opening', 'Received', 'Expenditure', 'Closing']],
-        body: [
-            ['Balvatika', cashAbstracts.balvatika.opening.toFixed(2), cashAbstracts.balvatika.received.toFixed(2), cashAbstracts.balvatika.expenditure?.toFixed(2), cashAbstracts.balvatika.balance.toFixed(2)],
-            ['Primary', cashAbstracts.primary.opening.toFixed(2), cashAbstracts.primary.received.toFixed(2), cashAbstracts.primary.expenditure?.toFixed(2), cashAbstracts.primary.balance.toFixed(2)],
-            ['Middle', cashAbstracts.middle.opening.toFixed(2), cashAbstracts.middle.received.toFixed(2), cashAbstracts.middle.expenditure?.toFixed(2), cashAbstracts.middle.balance.toFixed(2)],
-        ],
-        theme: 'grid',
-        styles: { fontSize: 9, cellPadding: 2, halign: 'right' },
-        headStyles: { fillColor: [41, 128, 185], textColor: 255, halign: 'center' },
-        columnStyles: { 0: { halign: 'left' }}
-    });
-    finalY = doc.lastAutoTable.finalY;
+    doc.text(`For the month of ${monthName}, ${year}`, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
     
-    startY = addSectionTitle('4. Cook Cum Helper Payment Details', finalY + 8);
-    const cookBody = cooks.length > 0
-        ? cooks.map(cook => [cook.name, cook.gender, cook.category, cook.paymentMode, cook.amountPaid.toFixed(2)])
-        : [[{ content: 'No cook data entered in settings.', colSpan: 5, styles: { halign: 'center' } }]];
+    // --- School Details Table ---
     doc.autoTable({
-        startY,
-        head: [['Name', 'Gender', 'Category', 'Payment Mode', 'Amount (Rs.)']],
-        body: cookBody,
+        body: [
+            [{ content: '1. School Details', colSpan: 4, styles: { fontStyle: 'bold', fillColor: [220, 220, 220] } }],
+            ['School Name', schoolDetails.name, 'UDISE Code', schoolDetails.udise],
+            ['State', schoolDetails.state, 'District', schoolDetails.district],
+            ['Block', schoolDetails.block, 'Village/Ward', schoolDetails.village],
+            ['School Type', schoolDetails.type, 'Category', schoolDetails.category],
+            ['Kitchen Type', schoolDetails.kitchenType, '', ''],
+        ],
+        startY: 30,
         theme: 'grid',
-        styles: { fontSize: 9, cellPadding: 2 },
-        headStyles: { fillColor: [41, 128, 185], textColor: 255, halign: 'center' },
     });
-    finalY = doc.lastAutoTable.finalY;
     
-    if (finalY > 250) { doc.addPage(); finalY = 15; }
-
-    startY = addSectionTitle('5. Food Grains Details (in Kg.)', finalY + 8);
-    doc.autoTable({
-        startY,
-        head: [['Category', 'Opening', 'Received', 'Consumed', 'Closing']],
-        body: [
-            ['Balvatika (Rice)', riceAbstracts.balvatika.opening.toFixed(3), riceAbstracts.balvatika.received.toFixed(3), riceAbstracts.balvatika.consumed?.toFixed(3), riceAbstracts.balvatika.balance.toFixed(3)],
-            ['Primary (Rice)', riceAbstracts.primary.opening.toFixed(3), riceAbstracts.primary.received.toFixed(3), riceAbstracts.primary.consumed?.toFixed(3), riceAbstracts.primary.balance.toFixed(3)],
-            ['Middle (Rice)', riceAbstracts.middle.opening.toFixed(3), riceAbstracts.middle.received.toFixed(3), riceAbstracts.middle.consumed?.toFixed(3), riceAbstracts.middle.balance.toFixed(3)],
+    // --- Abstracts Table ---
+    const abstractsBody = [
+        [{ content: '2. Monthly Abstract', colSpan: 8, styles: { fontStyle: 'bold', fillColor: [220, 220, 220] } }],
+        [
+            { content: '', rowSpan: 2, styles: { valign: 'middle' } },
+            { content: 'Opening Balance', colSpan: 2, styles: { halign: 'center' } },
+            { content: 'Received', colSpan: 2, styles: { halign: 'center' } },
+            { content: 'Consumption/Expenditure', colSpan: 2, styles: { halign: 'center' } },
+            { content: 'Closing Balance', colSpan: 2, styles: { halign: 'center' } },
         ],
-        theme: 'grid',
-        styles: { fontSize: 9, cellPadding: 2, halign: 'right' },
-        headStyles: { fillColor: [41, 128, 185], textColor: 255, halign: 'center' },
-        columnStyles: { 0: { halign: 'left' }}
-    });
-    finalY = doc.lastAutoTable.finalY;
+        ['Rice (kg)', 'Cash (₹)', 'Rice (kg)', 'Cash (₹)', 'Rice (kg)', 'Cash (₹)', 'Rice (kg)', 'Cash (₹)'],
+    ];
     
-    startY = addSectionTitle('6. Children Health Status', finalY + 8);
-    doc.autoTable({
-        startY,
-        head: [['Particulars', 'Count']],
-        body: [
-            ['IFA Tablets - Boys', healthStatus.ifaBoys],
-            ['IFA Tablets - Girls', healthStatus.ifaGirls],
-            ['Screened by RBSK Team', healthStatus.screenedByRBSK],
-            ['Referred by RBSK Team', healthStatus.referredByRBSK],
-        ],
-        theme: 'grid',
-        styles: { fontSize: 9, cellPadding: 2 },
-        headStyles: { fillColor: [41, 128, 185], textColor: 255, halign: 'center' },
-        columnStyles: { 1: { halign: 'center' }}
+    const categories: Category[] = ['balvatika', 'primary', 'middle'];
+    categories.forEach(cat => {
+        abstractsBody.push([
+            { content: cat.charAt(0).toUpperCase() + cat.slice(1), styles: { fontStyle: 'bold' } },
+            riceAbstracts[cat].opening.toFixed(3),
+            cashAbstracts[cat].opening.toFixed(2),
+            riceAbstracts[cat].received.toFixed(3),
+            cashAbstracts[cat].received.toFixed(2),
+            riceAbstracts[cat].consumed?.toFixed(3),
+            cashAbstracts[cat].expenditure?.toFixed(2),
+            riceAbstracts[cat].balance.toFixed(3),
+            cashAbstracts[cat].balance.toFixed(2),
+        ]);
     });
-    finalY = doc.lastAutoTable.finalY;
-
-    startY = addSectionTitle('7. Inspection Report', finalY + 8);
+    
     doc.autoTable({
-        startY,
-        head: [['Particulars', 'Status/Count']],
-        body: [
-            ['Inspection Done This Month', inspectionReport.inspected ? 'Yes' : 'No'],
-            ['Number of Untoward Incidents', inspectionReport.incidentsCount],
-        ],
+        body: abstractsBody,
+        startY: doc.lastAutoTable.finalY + 5,
         theme: 'grid',
-        styles: { fontSize: 9, cellPadding: 2 },
-        headStyles: { fillColor: [41, 128, 185], textColor: 255, halign: 'center' },
-        columnStyles: { 1: { halign: 'center' }}
+        styles: { halign: 'right' },
+        headStyles: { fontStyle: 'bold', fillColor: [220, 220, 220], textColor: 40 },
+        // FIX: Removed `fontStyle: 'normal'` as it was causing a type error and was redundant.
+        // The default font style is 'normal' anyway, and specific cells correctly override it to 'bold'.
+        columnStyles: { 0: { halign: 'left' } },
     });
-    finalY = doc.lastAutoTable.finalY;
 
-    const signatureY = finalY > 260 ? 280 : finalY + 25;
-    if (signatureY > 280) { doc.addPage(); finalY = 20; }
-    doc.setFontSize(10);
-    doc.text('____________________\nSignature of Sarpanch', pageMargin, signatureY);
-    doc.text('____________________\nSignature of Headmaster/Principal', pageWidth - pageMargin, signatureY, { align: 'right' });
+    // --- Student Attendance ---
+    const attendanceBody: any[] = [
+        [{ content: '3. Student Attendance', colSpan: 3, styles: { fontStyle: 'bold', fillColor: [220, 220, 220] } }],
+        [{ content: 'Category', styles: { fontStyle: 'bold' } }, { content: 'Total Present This Month', styles: { fontStyle: 'bold' } }, { content: 'Avg. Daily Attendance', styles: { fontStyle: 'bold' } }],
+    ];
+    const mealDays = summary.monthEntries.length;
+    categories.forEach(cat => {
+        const totalPresent = categoryTotals.present[cat];
+        const avgAttendance = mealDays > 0 ? (totalPresent / mealDays).toFixed(2) : '0.00';
+        attendanceBody.push([
+            cat.charAt(0).toUpperCase() + cat.slice(1),
+            totalPresent.toString(),
+            avgAttendance,
+        ]);
+    });
 
-    const filename = `${settings.schoolDetails.name.replace(/\s/g, '_')}_MDCF_${selectedMonth}.pdf`;
-    const dataUri = doc.output('datauristring');
-    return { dataUri, filename };
+    doc.autoTable({
+        body: attendanceBody,
+        startY: doc.lastAutoTable.finalY + 5,
+        theme: 'grid',
+        styles: { halign: 'center' },
+        columnStyles: { 0: { halign: 'left' } },
+    });
+
+    // --- Cook Details, Health, Inspection ---
+    const cookDetails = cooks.map((cook, i) => `${i + 1}. ${cook.name} (${cook.gender}, ${cook.category})`).join('\n') || 'No cooks listed.';
+
+    const otherDetailsBody = [
+        [{ content: '4. Other Details', colSpan: 2, styles: { fontStyle: 'bold', fillColor: [220, 220, 220] } }],
+        ['Cook-Cum-Helper(s)', cookDetails],
+        ['IFA Tablets Given (Boys)', healthStatus.ifaBoys.toString()],
+        ['IFA Tablets Given (Girls)', healthStatus.ifaGirls.toString()],
+        ['Students Screened by RBSK', healthStatus.screenedByRBSK.toString()],
+        ['Students Referred by RBSK', healthStatus.referredByRBSK.toString()],
+        ['Inspection Done?', inspectionReport.inspected ? 'Yes' : 'No'],
+        ['Untoward Incidents', inspectionReport.incidentsCount.toString()],
+    ];
+
+    doc.autoTable({
+        body: otherDetailsBody,
+        startY: doc.lastAutoTable.finalY + 5,
+        theme: 'grid',
+        columnStyles: { 0: { fontStyle: 'bold' } },
+    });
+    
+    // --- Signature ---
+    const finalY = doc.lastAutoTable.finalY;
+    const signatureText = `Signature of MDM Incharge: ${settings.mdmIncharge?.name || '____________________'}`;
+    doc.text(signatureText, doc.internal.pageSize.getWidth() - 14, finalY + 15, { align: 'right' });
+
+    return doc;
 };
 
-export const generatePDFReport = (reportType: string, data: AppData, selectedMonth: string) => {
+export const generatePDFReport = (reportType: string, data: AppData, month: string) => {
+    let doc: jsPDF;
+    let filename: string;
+    const schoolName = data.settings.schoolDetails.name.replace(/\s+/g, '_');
+    const monthName = new Date(`${month}-02T00:00:00Z`).toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
+    const year = month.slice(0, 4);
+
     switch (reportType) {
         case 'mdcf':
-            return generateMDCFReport(data, selectedMonth);
+            doc = generateMDCFReport(data, month);
+            filename = `MDCF_${schoolName}_${monthName}_${year}.pdf`;
+            break;
         case 'roll_statement':
-            return generateRollStatementPDF(data.settings);
+            doc = generateRollStatementReport(data);
+            filename = `Roll_Statement_${schoolName}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            break;
         case 'daily_consumption':
-             if (data.entries.filter((entry) => entry.date.startsWith(selectedMonth)).length === 0) {
-                throw new Error('No data available for the selected month to generate the report.');
-            }
-            return generateDailyConsumptionReport(data, selectedMonth);
+            doc = generateDailyConsumptionReport(data, month);
+            filename = `Consumption_Register_${schoolName}_${monthName}_${year}.pdf`;
+            break;
         default:
-            throw new Error('Unknown report type');
+            throw new Error('Invalid report type');
     }
+
+    const dataUri = doc.output('datauristring');
+    return { dataUri, filename };
 };
