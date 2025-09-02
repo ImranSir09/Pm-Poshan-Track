@@ -64,8 +64,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode; setCurrentPag
                 type: 'info',
                 title: 'Data Backup Recommended',
                 message: `Your last backup was over ${notificationSettings.backupReminderFrequency || 30} days ago.`,
-                page: 'data',
-                actionLabel: 'Go to Data',
+                page: 'settings',
+                actionLabel: 'Go to Settings',
             });
         }
 

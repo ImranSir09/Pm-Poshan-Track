@@ -25,34 +25,34 @@ const AbstractTable: React.FC<{ title: string; data: Record<Category, AbstractDa
                 <table className="w-full text-xs text-left">
                     <thead className="bg-amber-100/60 dark:bg-gray-800/50">
                         <tr>
-                            <th className="p-1.5">Category</th>
-                            <th className="p-1.5 text-right">Opening</th>
-                            <th className="p-1.5 text-right">Received</th>
-                            <th className="p-1.5 text-right">Total</th>
-                            <th className="p-1.5 text-right">{isCash ? 'Expend.' : 'Consumed'}</th>
-                            <th className="p-1.5 text-right">Balance</th>
+                            <th className="p-1.5 whitespace-nowrap">Category</th>
+                            <th className="p-1.5 text-right whitespace-nowrap">Opening</th>
+                            <th className="p-1.5 text-right whitespace-nowrap">Received</th>
+                            <th className="p-1.5 text-right whitespace-nowrap">Total</th>
+                            <th className="p-1.5 text-right whitespace-nowrap">{isCash ? 'Expend.' : 'Consumed'}</th>
+                            <th className="p-1.5 text-right whitespace-nowrap">Balance</th>
                         </tr>
                     </thead>
                     <tbody>
                         {categories.map(cat => (
                             <tr key={cat} className="border-b border-amber-200/50 dark:border-gray-700">
-                                <td className="p-1.5 capitalize">{cat}</td>
-                                <td className="p-1.5 text-right">{data[cat].opening.toFixed(decimals)}</td>
-                                <td className="p-1.5 text-right">{data[cat].received.toFixed(decimals)}</td>
-                                <td className="p-1.5 text-right">{data[cat].total.toFixed(decimals)}</td>
-                                <td className="p-1.5 text-right">{data[cat][key]?.toFixed(decimals)}</td>
-                                <td className="p-1.5 text-right">{data[cat].balance.toFixed(decimals)}</td>
+                                <td className="p-1.5 capitalize whitespace-nowrap">{cat}</td>
+                                <td className="p-1.5 text-right whitespace-nowrap">{data[cat].opening.toFixed(decimals)}</td>
+                                <td className="p-1.5 text-right whitespace-nowrap">{data[cat].received.toFixed(decimals)}</td>
+                                <td className="p-1.5 text-right whitespace-nowrap">{data[cat].total.toFixed(decimals)}</td>
+                                <td className="p-1.5 text-right whitespace-nowrap">{data[cat][key]?.toFixed(decimals)}</td>
+                                <td className="p-1.5 text-right whitespace-nowrap">{data[cat].balance.toFixed(decimals)}</td>
                             </tr>
                         ))}
                     </tbody>
                     <tfoot className="font-bold bg-amber-200/50 dark:bg-gray-800">
                         <tr>
-                            <td className="p-1.5">Total</td>
-                            <td className="p-1.5 text-right">{total.opening.toFixed(decimals)}</td>
-                            <td className="p-1.5 text-right">{total.received.toFixed(decimals)}</td>
-                            <td className="p-1.5 text-right">{total.total.toFixed(decimals)}</td>
-                            <td className="p-1.5 text-right">{total[key].toFixed(decimals)}</td>
-                            <td className="p-1.5 text-right">{total.balance.toFixed(decimals)}</td>
+                            <td className="p-1.5 whitespace-nowrap">Total</td>
+                            <td className="p-1.5 text-right whitespace-nowrap">{total.opening.toFixed(decimals)}</td>
+                            <td className="p-1.5 text-right whitespace-nowrap">{total.received.toFixed(decimals)}</td>
+                            <td className="p-1.5 text-right whitespace-nowrap">{total.total.toFixed(decimals)}</td>
+                            <td className="p-1.5 text-right whitespace-nowrap">{total[key].toFixed(decimals)}</td>
+                            <td className="p-1.5 text-right whitespace-nowrap">{total.balance.toFixed(decimals)}</td>
                         </tr>
                     </tfoot>
                 </table>

@@ -7,7 +7,7 @@ import Dashboard from './components/pages/Dashboard';
 import MonthlySummary from './components/pages/MonthlySummary';
 import Receipts from './components/pages/Receipts';
 import Settings from './components/pages/Settings';
-import DataManagement from './components/pages/DataManagement';
+import Reports from './components/pages/Reports';
 import Header from './components/layout/Header';
 import Navigation from './components/layout/Navigation';
 import ToastContainer from './components/ui/ToastContainer';
@@ -26,8 +26,8 @@ const App: React.FC = () => {
                 return <Receipts />;
             case 'settings':
                 return <Settings />;
-            case 'data':
-                return <DataManagement />;
+            case 'reports':
+                return <Reports />;
             default:
                 return <Dashboard />;
         }

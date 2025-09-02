@@ -1,13 +1,15 @@
-import React, { useState, useMemo } from 'react';
+
+import React, { useState, useMemo, useRef } from 'react';
 import { nanoid } from 'nanoid';
 import { Accordion, AccordionItem } from '../ui/Accordion';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 import { useData } from '../../hooks/useData';
-import { Settings, SchoolDetails, Rates, Category, CookCumHelper, ClassRoll, MonthlyBalanceData, MDMIncharge, NotificationSettings, InspectionReport } from '../../types';
+import { Settings, SchoolDetails, Rates, Category, CookCumHelper, ClassRoll, MonthlyBalanceData, MDMIncharge, NotificationSettings, InspectionReport, AppData } from '../../types';
 import { useToast } from '../../hooks/useToast';
 import { CLASS_STRUCTURE } from '../../constants';
 import { indianStates, jkDistrictsWithZones } from '../../data/locations';
+import Modal from '../ui/Modal';
 
 
 const calculateSectionTotals = (classes: ClassRoll[]) => {
@@ -41,10 +43,13 @@ const SectionTotalRow: React.FC<{ label: string, totals: ReturnType<typeof calcu
 );
 
 const SettingsPage: React.FC = () => {
-    const { data, updateSettings } = useData();
+    const { data, updateSettings, importData, resetData, updateLastBackupDate } = useData();
     const [settings, setSettings] = useState<Settings>(data.settings);
     const { showToast } = useToast();
     const [isUdiseValid, setIsUdiseValid] = useState(settings.schoolDetails.udise.length === 11 || settings.schoolDetails.udise.length === 0);
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isResetModalOpen, setResetModalOpen] = useState(false);
 
     const availableDistricts = useMemo(() => {
         const selectedStateData = indianStates.find(s => s.name === settings.schoolDetails.state);
@@ -172,6 +177,58 @@ const SettingsPage: React.FC = () => {
             }
         }));
     };
+    
+    const handleExport = () => {
+        try {
+            const jsonString = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const schoolName = data.settings.schoolDetails.name.replace(/\s+/g, '_');
+            a.download = `PM_POSHAN_Backup_${schoolName}_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Data exported successfully!', 'success');
+            updateLastBackupDate();
+        } catch (error) {
+            showToast('Error exporting data.', 'error');
+            console.error(error);
+        }
+    };
+
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target?.result;
+                if (typeof text !== 'string') throw new Error('Invalid file content');
+                const parsedData = JSON.parse(text) as AppData;
+                importData(parsedData);
+                showToast('Data imported successfully!', 'success');
+            } catch (error) {
+                showToast('Failed to import data. Invalid file format.', 'error');
+                console.error(error);
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = ''; // Reset input
+    };
+
+    const handleReset = () => {
+        resetData();
+        setResetModalOpen(false);
+        showToast('All application data has been reset.', 'success');
+    };
 
     const handleSave = () => {
         const isUdiseCorrectLength = settings.schoolDetails.udise.length === 11 || settings.schoolDetails.udise.length === 0;
@@ -210,6 +267,14 @@ const SettingsPage: React.FC = () => {
 
     return (
         <div className="pb-32">
+             <Modal isOpen={isResetModalOpen} onClose={() => setResetModalOpen(false)} title="Confirm Reset">
+                <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">Are you sure you want to delete ALL data? This action cannot be undone. It is highly recommended to export your data first.</p>
+                <div className="flex justify-end space-x-2">
+                    <Button variant="secondary" onClick={() => setResetModalOpen(false)}>Cancel</Button>
+                    <Button variant="danger" onClick={handleReset}>Yes, Reset Data</Button>
+                </div>
+            </Modal>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
             <div className="space-y-4">
                 <Accordion defaultOpenId="general">
                     <AccordionItem id="general" title="General & MDM Details">
@@ -577,6 +642,56 @@ const SettingsPage: React.FC = () => {
                                     )}
                                     <Input label="Number of untoward incidents" id="incidents" type="number" value={settings.inspectionReport.incidentsCount} onChange={e => handleInspectionChange('incidentsCount', e.target.value)} />
                                 </div>
+                            </div>
+                        </div>
+                    </AccordionItem>
+
+                    <AccordionItem id="data" title="Data Management">
+                        <div className="space-y-4">
+                            <div className="p-3 bg-amber-100/50 dark:bg-gray-800/50 rounded-lg">
+                                <p className="text-sm font-medium mb-1 text-stone-700 dark:text-gray-300">Export Data</p>
+                                <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">Save all your app data (settings, entries, receipts) to a JSON file on your device.</p>
+                                <Button onClick={handleExport} className="w-full">Export to JSON</Button>
+                            </div>
+                            <div className="p-3 bg-amber-100/50 dark:bg-gray-800/50 rounded-lg">
+                                <p className="text-sm font-medium mb-1 text-stone-700 dark:text-gray-300">Import Data</p>
+                                <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">Load data from a previously exported JSON file. This will overwrite current data.</p>
+                                <Button onClick={handleImportClick} variant="secondary" className="w-full">Import from JSON</Button>
+                            </div>
+                             <div className="p-3 bg-red-500/10 dark:bg-red-900/20 rounded-lg">
+                                <p className="text-sm font-medium mb-1 text-red-800 dark:text-red-300">Reset Application</p>
+                                <p className="text-xs text-red-700 dark:text-red-400 mb-2">This will permanently delete all entries, receipts, and settings, resetting the app to its initial state. Use with caution.</p>
+                                <Button onClick={() => setResetModalOpen(true)} variant="danger" className="w-full">Reset All Data</Button>
+                            </div>
+                        </div>
+                    </AccordionItem>
+                     <AccordionItem id="about" title="Help & About">
+                         <div className="space-y-4 text-sm text-stone-600 dark:text-gray-300">
+                            <div>
+                                <h3 className="font-semibold text-amber-700 dark:text-amber-400">App Guide</h3>
+                                <p className="text-xs text-stone-500 dark:text-gray-400 mt-1">
+                                    Here’s a quick guide to the app's functions:
+                                </p>
+                                <ul className="list-disc list-inside space-y-1 mt-2 text-xs">
+                                    <li><b>Dashboard:</b> Your daily hub. Add/edit today's meal entry and see a monthly overview at a glance.</li>
+                                    <li><b>Summary:</b> View detailed monthly breakdowns of consumption, expenditure, and stock balances.</li>
+                                    <li><b>Receipts:</b> Log all incoming rice and cash to keep your stock and fund records accurate.</li>
+                                    <li><b>Reports:</b> Generate PDF reports, back up your data to a file, or restore from a backup.</li>
+                                    <li><b>Settings:</b> Crucial for accuracy! Configure your school details, student enrollment, and food rates here before you start.</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-amber-700 dark:text-amber-400">Feedback & Support</h3>
+                                <p className="text-xs text-stone-500 dark:text-gray-400 mt-1">
+                                    Have questions or suggestions? Your feedback is valuable! Please get in touch.
+                                </p>
+                            </div>
+                            <div className="text-xs pt-2 border-t border-amber-200/50 dark:border-white/10">
+                                <p><strong>App Version:</strong> 1.2.0</p>
+                                <p><strong>Developer:</strong> Emraan Mugloo</p>
+                                <p><strong>Contact:</strong> <a href="tel:+919149690096" className="text-amber-600 dark:text-amber-400 hover:underline">+91 9149690096</a></p>
+                                <p><strong>Email:</strong> <a href="mailto:emraanmugloo123@gmail.com" className="text-amber-600 dark:text-amber-400 hover:underline">emraanmugloo123@gmail.com</a></p>
+                                <p><strong>Website:</strong> <a href="https://imransir09.github.io/Pm-Poshan-Track/" target="_blank" rel="noopener noreferrer" className="text-amber-600 dark:text-amber-400 hover:underline">Pm-Poshan-Track</a></p>
                             </div>
                         </div>
                     </AccordionItem>
