@@ -4,21 +4,35 @@ import Button from './Button';
 interface PDFPreviewModalProps {
     isOpen: boolean;
     onClose: () => void;
-    pdfDataUri: string;
+    pdfUrl: string;
+    pdfBlob: Blob | null;
     filename: string;
     onRegenerate: () => void;
 }
 
-const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({ isOpen, onClose, pdfDataUri, filename, onRegenerate }) => {
+const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({ isOpen, onClose, pdfUrl, pdfBlob, filename, onRegenerate }) => {
     if (!isOpen) return null;
 
     const handleDownload = () => {
+        if (!pdfBlob) {
+            // Fallback for safety, using the provided URL
+            const link = document.createElement('a');
+            link.href = pdfUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            return;
+        }
+        // Preferred method: create a temporary URL from the blob for downloading
+        const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
-        link.href = pdfDataUri;
+        link.href = url;
         link.download = filename;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(url); // Clean up the temporary URL
     };
 
     return (
@@ -47,7 +61,7 @@ const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({ isOpen, onClose, pdfD
             </div>
             <div className="flex-grow bg-gray-700 rounded-lg overflow-hidden">
                 <iframe
-                    src={pdfDataUri}
+                    src={pdfUrl}
                     title="PDF Preview"
                     className="w-full h-full border-0"
                 />

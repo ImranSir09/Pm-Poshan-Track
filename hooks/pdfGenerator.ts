@@ -27,7 +27,7 @@ const calculateSectionTotals = (classes: ClassRoll[]) => {
     });
 };
 
-const generateMDCFReport = (data: AppData, month: string): string => {
+const generateMDCFReport = (data: AppData, month: string): Blob => {
     const doc = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) as jsPDF;
     const { settings, entries } = data;
     const { schoolDetails, healthStatus, inspectionReport, cooks } = settings;
@@ -176,10 +176,10 @@ const generateMDCFReport = (data: AppData, month: string): string => {
     doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, 14, doc.internal.pageSize.getHeight() - 10);
     doc.text('Created from PM Poshan Track App by Imran Gani Mugloo, Teacher Zone Vailoo', doc.internal.pageSize.getWidth() - 14, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
 
-    return doc.output('datauristring');
+    return doc.output('blob');
 };
 
-const generateRollStatementReport = (data: AppData): string => {
+const generateRollStatementReport = (data: AppData): Blob => {
     const doc = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) as jsPDF;
     const { settings } = data;
     const { schoolDetails, classRolls } = settings;
@@ -243,10 +243,10 @@ const generateRollStatementReport = (data: AppData): string => {
     doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, 14, doc.internal.pageSize.getHeight() - 10);
     doc.text('Created from PM Poshan Track App by Imran Gani Mugloo, Teacher Zone Vailoo', doc.internal.pageSize.getWidth() - 14, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
 
-    return doc.output('datauristring');
+    return doc.output('blob');
 };
 
-const generateDailyConsumptionReport = (data: AppData, month: string): string => {
+const generateDailyConsumptionReport = (data: AppData, month: string): Blob => {
     const doc = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) as jsPDF;
     const { settings, entries } = data;
     const monthEntries = entries.filter(e => e.date.startsWith(month));
@@ -322,11 +322,11 @@ const generateDailyConsumptionReport = (data: AppData, month: string): string =>
         doc.text('Created from PM Poshan Track App by Imran Gani Mugloo, Teacher Zone Vailoo', doc.internal.pageSize.getWidth() - 14, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
     });
 
-    return doc.output('datauristring');
+    return doc.output('blob');
 };
 
-export const generatePDFReport = (reportType: string, data: AppData, selectedMonth: string): { dataUri: string, filename: string } => {
-    let dataUri: string;
+export const generatePDFReport = (reportType: string, data: AppData, selectedMonth: string): { pdfBlob: Blob; filename: string } => {
+    let pdfBlob: Blob;
     let filename: string;
     const schoolName = data.settings.schoolDetails.name.replace(/\s+/g, '_');
     const monthFormatted = selectedMonth.replace('-', '_');
@@ -334,21 +334,21 @@ export const generatePDFReport = (reportType: string, data: AppData, selectedMon
     try {
         switch (reportType) {
             case 'roll_statement':
-                dataUri = generateRollStatementReport(data);
+                pdfBlob = generateRollStatementReport(data);
                 filename = `Roll_Statement_${schoolName}.pdf`;
                 break;
             case 'daily_consumption':
-                dataUri = generateDailyConsumptionReport(data, selectedMonth);
+                pdfBlob = generateDailyConsumptionReport(data, selectedMonth);
                 filename = `Daily_Consumption_${schoolName}_${monthFormatted}.pdf`;
                 break;
             case 'mdcf':
-                dataUri = generateMDCFReport(data, selectedMonth);
+                pdfBlob = generateMDCFReport(data, selectedMonth);
                 filename = `MDCF_Report_${schoolName}_${monthFormatted}.pdf`;
                 break;
             default:
                 throw new Error('Unknown report type');
         }
-        return { dataUri, filename };
+        return { pdfBlob, filename };
     } catch (error) {
         console.error("Error generating PDF:", error);
         throw new Error("Failed to generate PDF. Check console for details.");

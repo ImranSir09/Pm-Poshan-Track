@@ -19,18 +19,28 @@ const DataManagement: React.FC = () => {
     
     const [isGenerating, setIsGenerating] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-    const [pdfPreviewData, setPdfPreviewData] = useState<{ dataUri: string; filename: string } | null>(null);
+    const [pdfPreviewData, setPdfPreviewData] = useState<{ blobUrl: string; pdfBlob: Blob; filename: string } | null>(null);
 
     const handleReportExport = () => {
         setIsGenerating(true);
         // Use a timeout to allow the UI to update before the main thread is blocked by PDF generation
         setTimeout(() => {
             try {
+                // Revoke previous blob URL if it exists to avoid memory leaks
+                if (pdfPreviewData?.blobUrl) {
+                    URL.revokeObjectURL(pdfPreviewData.blobUrl);
+                }
                 const result = generatePDFReport(reportType, data, selectedMonth);
-                setPdfPreviewData(result);
+                const blobUrl = URL.createObjectURL(result.pdfBlob);
+                setPdfPreviewData({ 
+                    blobUrl, 
+                    pdfBlob: result.pdfBlob, 
+                    filename: result.filename 
+                });
                 if (!isPreviewOpen) {
                     setIsPreviewOpen(true);
                 }
+                showToast('Report generated successfully!', 'success');
             } catch (error: any) {
                 console.error("PDF generation failed:", error);
                 showToast(error.message || 'Failed to generate PDF report.', 'error');
@@ -38,6 +48,14 @@ const DataManagement: React.FC = () => {
                 setIsGenerating(false);
             }
         }, 50);
+    };
+
+    const handleClosePreview = () => {
+        if (pdfPreviewData?.blobUrl) {
+            URL.revokeObjectURL(pdfPreviewData.blobUrl);
+        }
+        setIsPreviewOpen(false);
+        setPdfPreviewData(null);
     };
 
     const handleExport = () => {
@@ -96,8 +114,9 @@ const DataManagement: React.FC = () => {
         <>
             <PDFPreviewModal
                 isOpen={isPreviewOpen}
-                onClose={() => setIsPreviewOpen(false)}
-                pdfDataUri={pdfPreviewData?.dataUri || ''}
+                onClose={handleClosePreview}
+                pdfUrl={pdfPreviewData?.blobUrl || ''}
+                pdfBlob={pdfPreviewData?.pdfBlob || null}
                 filename={pdfPreviewData?.filename || 'report.pdf'}
                 onRegenerate={handleReportExport}
             />
@@ -198,9 +217,6 @@ const DataManagement: React.FC = () => {
                         <div className="text-xs pt-2 border-t border-amber-200/50 dark:border-white/10">
                             <p><strong>App Version:</strong> 1.2.0</p>
                             <p><strong>Developer:</strong> Emraan Mugloo</p>
-                            <p><strong>Contact:</strong> <a href="tel:+919149690096" className="text-amber-600 dark:text-amber-400 hover:underline">+91 9149690096</a></p>
-                            <p><strong>Email:</strong> <a href="mailto:emraanmugloo123@gmail.com" className="text-amber-600 dark:text-amber-400 hover:underline">emraanmugloo123@gmail.com</a></p>
-                            <p><strong>Website:</strong> <a href="https://imransir09.github.io/Pm-Poshan-Track/" target="_blank" rel="noopener noreferrer" className="text-amber-600 dark:text-amber-400 hover:underline">Pm-Poshan-Track</a></p>
                         </div>
                     </div>
                 </Card>
@@ -208,5 +224,4 @@ const DataManagement: React.FC = () => {
         </>
     );
 };
-
 export default DataManagement;

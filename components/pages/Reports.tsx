@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -20,15 +19,24 @@ const Reports: React.FC = () => {
     
     const [isGenerating, setIsGenerating] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-    const [pdfPreviewData, setPdfPreviewData] = useState<{ dataUri: string; filename: string } | null>(null);
+    const [pdfPreviewData, setPdfPreviewData] = useState<{ blobUrl: string; pdfBlob: Blob; filename: string } | null>(null);
 
     const handleReportExport = () => {
         setIsGenerating(true);
         // Use a timeout to allow the UI to update before the main thread is blocked by PDF generation
         setTimeout(() => {
             try {
+                // Revoke previous blob URL if it exists to avoid memory leaks
+                if (pdfPreviewData?.blobUrl) {
+                    URL.revokeObjectURL(pdfPreviewData.blobUrl);
+                }
                 const result = generatePDFReport(reportType, data, selectedMonth);
-                setPdfPreviewData(result);
+                const blobUrl = URL.createObjectURL(result.pdfBlob);
+                setPdfPreviewData({ 
+                    blobUrl, 
+                    pdfBlob: result.pdfBlob, 
+                    filename: result.filename 
+                });
                 if (!isPreviewOpen) {
                     setIsPreviewOpen(true);
                 }
@@ -40,6 +48,14 @@ const Reports: React.FC = () => {
                 setIsGenerating(false);
             }
         }, 50);
+    };
+
+    const handleClosePreview = () => {
+        if (pdfPreviewData?.blobUrl) {
+            URL.revokeObjectURL(pdfPreviewData.blobUrl);
+        }
+        setIsPreviewOpen(false);
+        setPdfPreviewData(null);
     };
 
     const handleExport = () => {
@@ -98,8 +114,9 @@ const Reports: React.FC = () => {
         <>
             <PDFPreviewModal
                 isOpen={isPreviewOpen}
-                onClose={() => setIsPreviewOpen(false)}
-                pdfDataUri={pdfPreviewData?.dataUri || ''}
+                onClose={handleClosePreview}
+                pdfUrl={pdfPreviewData?.blobUrl || ''}
+                pdfBlob={pdfPreviewData?.pdfBlob || null}
                 filename={pdfPreviewData?.filename || 'report.pdf'}
                 onRegenerate={handleReportExport}
             />
