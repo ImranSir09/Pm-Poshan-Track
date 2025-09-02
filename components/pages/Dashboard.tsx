@@ -16,6 +16,11 @@ const Dashboard: React.FC = () => {
     const { mdmIncharge } = settings;
 
     const [isLoading, setIsLoading] = useState(true);
+    const [dashboardData, setDashboardData] = useState<{
+        totalExpenditure: number;
+        totalRice: number;
+        monthlyData: { name: string; date: Date; balvatika: number; primary: number; middle: number; total: number }[];
+    }>({ totalExpenditure: 0, totalRice: 0, monthlyData: [] });
 
     // Daily Entry Reminder
     useEffect(() => {
@@ -29,17 +34,18 @@ const Dashboard: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setIsLoading(false);
-        }, 1200);
-        return () => clearTimeout(timer);
-    }, []);
-
     const displayedMonthKey = useMemo(() => new Date().toISOString().slice(0, 7), []);
 
-    const { totalExpenditure, totalRice, monthlyData } = useMemo(() => {
+    useEffect(() => {
+        setIsLoading(true);
+
         const currentMonthEntries = data.entries.filter(entry => entry.date.startsWith(displayedMonthKey));
+
+        // Create a Map for efficient lookups (O(1) on average) instead of using .find() in a loop
+        const entriesMap = new Map<string, DailyEntry>();
+        for (const entry of currentMonthEntries) {
+            entriesMap.set(entry.id, entry);
+        }
         
         const totalExpenditure = currentMonthEntries.reduce((sum, entry) => sum + entry.consumption.total, 0);
         const totalRice = currentMonthEntries.reduce((sum, entry) => sum + entry.consumption.rice, 0);
@@ -53,7 +59,7 @@ const Dashboard: React.FC = () => {
         for (let i = 1; i <= daysInMonth; i++) {
             const date = new Date(year, month, i);
             const dateString = date.toISOString().slice(0, 10);
-            const entry: DailyEntry | undefined = currentMonthEntries.find(e => e.id === dateString);
+            const entry = entriesMap.get(dateString);
             
             chartData.push({
                 name: `${i}`,
@@ -65,7 +71,8 @@ const Dashboard: React.FC = () => {
             });
         }
 
-        return { totalExpenditure, totalRice, monthlyData: chartData };
+        setDashboardData({ totalExpenditure, totalRice, monthlyData: chartData });
+        setIsLoading(false);
     }, [data.entries, displayedMonthKey]);
     
     const CustomTooltip = ({ active, payload, label }: any) => {
@@ -105,11 +112,11 @@ const Dashboard: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4 text-center">
                     <div>
                         <p className="text-xs text-stone-500 dark:text-gray-400">Total Expenditure</p>
-                        <p className="text-lg font-bold text-amber-700 dark:text-amber-400">₹{totalExpenditure.toFixed(2)}</p>
+                        <p className="text-lg font-bold text-amber-700 dark:text-amber-400">₹{dashboardData.totalExpenditure.toFixed(2)}</p>
                     </div>
                     <div>
                         <p className="text-xs text-stone-500 dark:text-gray-400">Total Rice Consumed</p>
-                        <p className="text-lg font-bold text-amber-700 dark:text-amber-400">{totalRice.toFixed(2)} kg</p>
+                        <p className="text-lg font-bold text-amber-700 dark:text-amber-400">{dashboardData.totalRice.toFixed(2)} kg</p>
                     </div>
                 </div>
             </Card>
@@ -117,22 +124,22 @@ const Dashboard: React.FC = () => {
             <Card title="Daily Attendance">
                 <div style={{ width: '100%', height: 100 }}>
                     <ResponsiveContainer>
-                        <BarChart data={monthlyData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                        <BarChart data={dashboardData.monthlyData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                             <XAxis dataKey="name" tick={{ fill: '#78716c', fontSize: 10 }} axisLine={{ stroke: '#d6d3d1' }} tickLine={{ stroke: '#d6d3d1' }} className="dark:tick={{ fill: '#9ca3af' }} dark:axisLine={{ stroke: '#4b5563' }} dark:tickLine={{ stroke: '#4b5563' }}" />
                             <YAxis tick={{ fill: '#78716c', fontSize: 10 }} axisLine={{ stroke: '#d6d3d1' }} tickLine={{ stroke: '#d6d3d1' }} className="dark:tick={{ fill: '#9ca3af' }} dark:axisLine={{ stroke: '#4b5563' }} dark:tickLine={{ stroke: '#4b5563' }}" />
                             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(180,180,120,0.1)' }} />
                             <Bar dataKey="balvatika" stackId="a" fill="#a8a29e" radius={[5, 5, 0, 0]} barSize={10} >
-                                 {monthlyData.map((entry, index) => (
+                                 {dashboardData.monthlyData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.date.getDay() === 0 ? '#ef4444' : '#a8a29e'} />
                                 ))}
                             </Bar>
                             <Bar dataKey="primary" stackId="a" fill="#f59e0b" barSize={10}>
-                                {monthlyData.map((entry, index) => (
+                                {dashboardData.monthlyData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.date.getDay() === 0 ? '#ef4444' : '#f59e0b'} />
                                 ))}
                             </Bar>
                              <Bar dataKey="middle" stackId="a" fill="#ffc658" radius={[5, 5, 0, 0]} barSize={10}>
-                                {monthlyData.map((entry, index) => (
+                                {dashboardData.monthlyData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.date.getDay() === 0 ? '#ef4444' : '#ffc658'} />
                                 ))}
                              </Bar>
