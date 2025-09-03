@@ -1,5 +1,7 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { AppData, DailyEntry, Receipt, Settings, MonthlyBalanceData, MonthlyBalance } from '../types';
+// FIX: Import InspectionAuthority to resolve type error during data migration.
+import { AppData, DailyEntry, Receipt, Settings, MonthlyBalanceData, MonthlyBalance, InspectionAuthority } from '../types';
 import { DEFAULT_SETTINGS } from '../constants';
 import { showToast } from './useToast';
 
@@ -37,6 +39,17 @@ const getInitialData = (): AppData => {
             // Backward compatibility/migration for settings
             const mergedSettings = deepMerge(DEFAULT_SETTINGS, parsedData.settings);
             parsedData.settings = mergedSettings;
+
+            // MIGRATION: Convert old inspection report object to new string format
+            if (parsedData.settings?.inspectionReport?.inspectedBy && isObject(parsedData.settings.inspectionReport.inspectedBy)) {
+                const oldInspectedBy = parsedData.settings.inspectionReport.inspectedBy as any;
+                let newInspectedBy: InspectionAuthority = '';
+                if (oldInspectedBy.taskForce) newInspectedBy = 'Task Force';
+                else if (oldInspectedBy.districtOfficials) newInspectedBy = 'District Officials';
+                else if (oldInspectedBy.blockOfficials) newInspectedBy = 'Block Officials';
+                else if (oldInspectedBy.smcMembers) newInspectedBy = 'SMC Members';
+                parsedData.settings.inspectionReport.inspectedBy = newInspectedBy;
+            }
 
             // MIGRATION: Convert old scalar receipts to new category-wise structure
             if (parsedData.receipts && parsedData.receipts.length > 0 && typeof (parsedData.receipts[0] as any).rice === 'number') {

@@ -9,15 +9,40 @@ import Modal from '../ui/Modal';
 import NumberInput from '../ui/NumberInput';
 import Input from '../ui/Input';
 
-const NO_MEAL_REASONS = [
-    "Foodgrains not available",
-    "Cook-cum-helper not available",
-    "Funds not available",
-    "Less attendance",
-    "Holiday (Gazetted)",
-    "Holiday (Local/Restricted)",
-    "Other Reasons"
-];
+const NO_MEAL_REASONS_STRUCTURED = {
+  "Foodgrains not Available": [
+    "Foodgrains not received",
+    "Foodgrains damaged",
+    "Insufficient foodgrains"
+  ],
+  "Cook not Available": [
+    "Cook not appointed",
+    "Cook Salary not Paid",
+    "Cook quitted"
+  ],
+  "Fuel/Ingredients not Available": [
+    "Insufficient Fuel",
+    "Insufficient Funds for Cooking",
+    "Insufficient Ingredients"
+  ],
+  "Packages not arrived from NGO/SHG": [
+    "Vendor not Received Payment",
+    "Damaged in Transit"
+  ],
+  "Holiday in School": [
+    "Gazetted Holiday",
+    "Local Holiday",
+    "Closed (Natural Calamity)",
+    "Winter Vacations",
+    "Summer Vacations",
+    "Festival Break"
+  ],
+  "Others": [
+    "Others"
+  ]
+};
+type MainReason = keyof typeof NO_MEAL_REASONS_STRUCTURED;
+const MAIN_REASONS = Object.keys(NO_MEAL_REASONS_STRUCTURED) as MainReason[];
 
 const DailyEntryPage: React.FC = () => {
     const { data, addEntry } = useData();
@@ -54,7 +79,9 @@ const DailyEntryPage: React.FC = () => {
     const [isEntryModalOpen, setEntryModalOpen] = useState(false);
     const [isOverwriteModalOpen, setOverwriteModalOpen] = useState(false);
     const [isReasonModalOpen, setReasonModalOpen] = useState(false);
-    const [reasonForNoMeal, setReasonForNoMeal] = useState('');
+    
+    const [mainReason, setMainReason] = useState<MainReason | ''>('');
+    const [subReason, setSubReason] = useState('');
     const [pendingEntry, setPendingEntry] = useState<DailyEntry | null>(null);
 
     const isSunday = useMemo(() => new Date(selectedDate + 'T00:00:00').getDay() === 0, [selectedDate]);
@@ -144,23 +171,40 @@ const DailyEntryPage: React.FC = () => {
             initiateSaveProcess(newEntry);
         } else {
             const existingEntry = data.entries.find(e => e.id === selectedDate);
-            setReasonForNoMeal(existingEntry?.reasonForNoMeal || "");
+            const [currentMain = '', currentSub = ''] = existingEntry?.reasonForNoMeal?.split(': ') || [];
+            
+            const validMainReason = MAIN_REASONS.find(r => r === currentMain);
+            if (validMainReason) {
+                setMainReason(validMainReason);
+                setSubReason(currentSub);
+            } else {
+                setMainReason('');
+                setSubReason('');
+            }
             setReasonModalOpen(true);
         }
     };
     
     const handleSaveZeroEntry = () => {
-        if (!reasonForNoMeal) {
-            showToast('Please select a reason.', 'error');
+        if (!mainReason) {
+            showToast('Please select a main reason.', 'error');
             return;
         }
+        const subReasons = NO_MEAL_REASONS_STRUCTURED[mainReason];
+        if (subReasons.length > 0 && !subReason) {
+            showToast('Please select a sub-reason.', 'error');
+            return;
+        }
+
+        const finalReason = subReasons.length > 0 ? `${mainReason}: ${subReason}` : mainReason;
+        
         const zeroEntry: DailyEntry = {
             id: selectedDate,
             date: selectedDate,
             present: { balvatika: 0, primary: 0, middle: 0 },
             totalPresent: 0,
             consumption: { rice: 0, dalVeg: 0, oilCond: 0, salt: 0, fuel: 0, total: 0 },
-            reasonForNoMeal: reasonForNoMeal,
+            reasonForNoMeal: finalReason,
         };
         setReasonModalOpen(false);
         initiateSaveProcess(zeroEntry);
@@ -173,6 +217,8 @@ const DailyEntryPage: React.FC = () => {
         setOverwriteModalOpen(false);
         setPendingEntry(null);
     }
+
+    const currentSubReasons = mainReason ? NO_MEAL_REASONS_STRUCTURED[mainReason] : [];
 
     return (
         <>
@@ -215,17 +261,36 @@ const DailyEntryPage: React.FC = () => {
                 <div className="space-y-4">
                     <p className="text-sm text-stone-600 dark:text-gray-300">Please provide a reason for not serving the meal today.</p>
                     <div>
-                        <label htmlFor="reason-select" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Reason</label>
+                        <label htmlFor="main-reason-select" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Main Reason</label>
                         <select
-                            id="reason-select"
-                            value={reasonForNoMeal}
-                            onChange={(e) => setReasonForNoMeal(e.target.value)}
+                            id="main-reason-select"
+                            value={mainReason}
+                            onChange={(e) => {
+                                setMainReason(e.target.value as MainReason);
+                                setSubReason(''); // Reset sub-reason when main reason changes
+                            }}
                             className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5"
                         >
                             <option value="">Select a reason...</option>
-                            {NO_MEAL_REASONS.map(reason => <option key={reason} value={reason}>{reason}</option>)}
+                            {MAIN_REASONS.map(reason => <option key={reason} value={reason}>{reason}</option>)}
                         </select>
                     </div>
+
+                    {currentSubReasons.length > 0 && (
+                        <div>
+                            <label htmlFor="sub-reason-select" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Sub-Reason</label>
+                            <select
+                                id="sub-reason-select"
+                                value={subReason}
+                                onChange={(e) => setSubReason(e.target.value)}
+                                className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5"
+                            >
+                                <option value="">Select a sub-reason...</option>
+                                {currentSubReasons.map(reason => <option key={reason} value={reason}>{reason}</option>)}
+                            </select>
+                        </div>
+                    )}
+
                     <div className="flex justify-end space-x-2">
                         <Button variant="secondary" onClick={() => setReasonModalOpen(false)}>Cancel</Button>
                         <Button onClick={handleSaveZeroEntry}>Save Entry</Button>

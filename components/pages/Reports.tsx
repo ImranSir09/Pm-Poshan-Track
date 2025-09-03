@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -17,8 +16,10 @@ const Reports: React.FC = () => {
     const [isResetModalOpen, setResetModalOpen] = useState(false);
     const [reportType, setReportType] = useState('mdcf');
     const [selectedMonth, setSelectedMonth] = useState(() => {
-        const now = new Date();
-        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${year}-${month}`;
     });
     
     const [isGenerating, setIsGenerating] = useState(false);
@@ -219,7 +220,7 @@ const Reports: React.FC = () => {
                             </p>
                         </div>
                         <div className="text-xs pt-2 border-t border-amber-200/50 dark:border-white/10">
-                            <p><strong>App Version:</strong> 1.2.0</p>
+                            <p><strong>App Version:</strong> 1.2.1</p>
                             <p><strong>Developer:</strong> Emraan Mugloo</p>
                             <p><strong>Contact:</strong> <a href="tel:+919149690096" className="text-amber-600 dark:text-amber-400 hover:underline">+91 9149690096</a></p>
                             <p><strong>Email:</strong> <a href="mailto:emraanmugloo123@gmail.com" className="text-amber-600 dark:text-amber-400 hover:underline">emraanmugloo123@gmail.com</a></p>

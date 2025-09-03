@@ -1,4 +1,5 @@
 import { AppData, MonthlyBalanceData, Category, AbstractData } from '../types';
+import { DEFAULT_SETTINGS } from '../constants';
 
 export const getOpeningBalanceForMonth = (data: AppData, selectedMonth: string): MonthlyBalanceData => {
     const allBalanceKeys = Object.keys(data.monthlyBalances);
@@ -17,7 +18,8 @@ export const getOpeningBalanceForMonth = (data: AppData, selectedMonth: string):
 
 export const calculateMonthlySummary = (data: AppData, selectedMonth: string) => {
     const entries = data.entries.filter(e => e.date.startsWith(selectedMonth));
-    const { rates } = data.settings;
+    // FIX: Add a fallback to default rates to prevent calculation errors if settings are corrupted or missing.
+    const rates = data.settings.rates || DEFAULT_SETTINGS.rates;
     const categories: Category[] = ['balvatika', 'primary', 'middle'];
     
     const openingBalance = getOpeningBalanceForMonth(data, selectedMonth);
@@ -50,14 +52,15 @@ export const calculateMonthlySummary = (data: AppData, selectedMonth: string) =>
 
     entries.forEach(entry => {
         categories.forEach(cat => {
-            const present = entry.present[cat];
+            const present = entry.present[cat] || 0;
             categoryTotals.present[cat] += present;
             
+            // FIX: Ensure each rate category exists before using it to prevent NaN errors.
             const dailyExp = {
-                dalVeg: present * rates.dalVeg[cat],
-                oilCond: present * rates.oilCond[cat],
-                salt: present * rates.salt[cat],
-                fuel: present * rates.fuel[cat],
+                dalVeg: present * (rates.dalVeg?.[cat] || 0),
+                oilCond: present * (rates.oilCond?.[cat] || 0),
+                salt: present * (rates.salt?.[cat] || 0),
+                fuel: present * (rates.fuel?.[cat] || 0),
             };
             
             expenditureBreakdown.dalVeg += dailyExp.dalVeg;
@@ -66,7 +69,7 @@ export const calculateMonthlySummary = (data: AppData, selectedMonth: string) =>
             expenditureBreakdown.fuel += dailyExp.fuel;
             
             categoryTotals.expenditure[cat] += dailyExp.dalVeg + dailyExp.oilCond + dailyExp.salt + dailyExp.fuel;
-            categoryTotals.rice[cat] += (present * rates.rice[cat]) / 1000;
+            categoryTotals.rice[cat] += (present * (rates.rice?.[cat] || 0)) / 1000;
         });
     });
 
@@ -89,19 +92,28 @@ export const calculateMonthlySummary = (data: AppData, selectedMonth: string) =>
     const cashAbstracts: Record<Category, AbstractData> = {} as any;
     
     categories.forEach(cat => {
+        const riceOpening = openingBalance.rice?.[cat] || 0;
+        const riceReceived = received.rice?.[cat] || 0;
+        const riceConsumed = categoryTotals.rice?.[cat] || 0;
+
         riceAbstracts[cat] = {
-            opening: openingBalance.rice[cat],
-            received: received.rice[cat],
-            total: openingBalance.rice[cat] + received.rice[cat],
-            consumed: categoryTotals.rice[cat],
-            balance: openingBalance.rice[cat] + received.rice[cat] - categoryTotals.rice[cat],
+            opening: riceOpening,
+            received: riceReceived,
+            total: riceOpening + riceReceived,
+            consumed: riceConsumed,
+            balance: riceOpening + riceReceived - riceConsumed,
         };
+        
+        const cashOpening = openingBalance.cash?.[cat] || 0;
+        const cashReceived = received.cash?.[cat] || 0;
+        const cashExpenditure = categoryTotals.expenditure?.[cat] || 0;
+
         cashAbstracts[cat] = {
-            opening: openingBalance.cash[cat],
-            received: received.cash[cat],
-            total: openingBalance.cash[cat] + received.cash[cat],
-            expenditure: categoryTotals.expenditure[cat],
-            balance: openingBalance.cash[cat] + received.cash[cat] - categoryTotals.expenditure[cat],
+            opening: cashOpening,
+            received: cashReceived,
+            total: cashOpening + cashReceived,
+            expenditure: cashExpenditure,
+            balance: cashOpening + cashReceived - cashExpenditure,
         };
     });
 

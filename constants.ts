@@ -53,12 +53,7 @@ export const DEFAULT_SETTINGS: Settings = {
     inspectionReport: {
         inspected: false,
         incidentsCount: 0,
-        inspectedBy: {
-            taskForce: false,
-            districtOfficials: false,
-            blockOfficials: false,
-            smcMembers: false,
-        },
+        inspectedBy: '',
     },
     initialOpeningBalance: {
         rice: { balvatika: 0, primary: 0, middle: 0 },

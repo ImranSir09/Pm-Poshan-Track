@@ -75,16 +75,12 @@ export interface HealthStatus {
     referredByRBSK: number;
 }
 
+export type InspectionAuthority = 'Task Force' | 'District Officials' | 'Block Officials' | 'SMC Members' | '';
+
 export interface InspectionReport {
     inspected: boolean;
     incidentsCount: number;
-    // New field for MDCF report
-    inspectedBy: {
-        taskForce: boolean;
-        districtOfficials: boolean;
-        blockOfficials: boolean;
-        smcMembers: boolean;
-    };
+    inspectedBy: InspectionAuthority;
 }
 
 export interface MDMIncharge {

@@ -5,7 +5,7 @@ import { Accordion, AccordionItem } from '../ui/Accordion';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 import { useData } from '../../hooks/useData';
-import { Settings, SchoolDetails, Rates, Category, CookCumHelper, ClassRoll, MonthlyBalanceData, MDMIncharge, NotificationSettings, InspectionReport } from '../../types';
+import { Settings, SchoolDetails, Rates, Category, CookCumHelper, ClassRoll, MonthlyBalanceData, MDMIncharge, NotificationSettings, InspectionReport, InspectionAuthority } from '../../types';
 import { useToast } from '../../hooks/useToast';
 import { CLASS_STRUCTURE } from '../../constants';
 import { indianStates, jkDistrictsWithZones } from '../../data/locations';
@@ -67,6 +67,10 @@ const SettingsPage: React.FC = () => {
         
         const newSchoolDetails = { ...settings.schoolDetails, [field]: value };
         
+        if (field === 'schoolCategoryMDCF') {
+            newSchoolDetails.category = value;
+        }
+
         if (field === 'state') {
             newSchoolDetails.district = '';
             newSchoolDetails.block = ''; // Reset block when state changes
@@ -156,22 +160,14 @@ const SettingsPage: React.FC = () => {
         setSettings(prev => ({ ...prev, healthStatus: { ...prev.healthStatus, [field]: parseInt(value) || 0 }}));
     }
 
-    const handleInspectionChange = (field: keyof Settings['inspectionReport'], value: string | boolean) => {
-        const finalValue = typeof value === 'boolean' ? value : parseInt(value) || 0;
-        setSettings(prev => ({ ...prev, inspectionReport: { ...prev.inspectionReport, [field]: finalValue }}));
-    }
-
-    const handleInspectionByChange = (field: keyof InspectionReport['inspectedBy'], value: boolean) => {
-        setSettings(prev => ({
-            ...prev,
-            inspectionReport: {
-                ...prev.inspectionReport,
-                inspectedBy: {
-                    ...prev.inspectionReport.inspectedBy,
-                    [field]: value
-                }
-            }
-        }));
+    const handleInspectionChange = (field: keyof InspectionReport, value: string | boolean) => {
+        let finalValue: string | boolean | number = value;
+        if (field === 'incidentsCount') {
+            finalValue = parseInt(value as string, 10) || 0;
+        } else {
+            finalValue = value;
+        }
+        setSettings(prev => ({ ...prev, inspectionReport: { ...prev.inspectionReport, [field]: finalValue } }));
     };
     
     const handleSave = () => {
@@ -231,11 +227,9 @@ const SettingsPage: React.FC = () => {
                                         />
                                         {!isUdiseValid && <p className="mt-1 text-xs text-red-500 dark:text-red-400">UDISE code must be 11 digits long.</p>}
                                     </div>
-                                    <Input label="School Type (General)" id="schoolType" value={settings.schoolDetails.type} onChange={e => handleSchoolDetailsChange('type', e.target.value)} />
-                                    <Input label="School Category (General)" id="schoolCategory" value={settings.schoolDetails.category} onChange={e => handleSchoolDetailsChange('category', e.target.value)} />
                                     
                                     <div>
-                                        <label htmlFor="schoolTypeMDCF" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">School Type (for MDCF Report)</label>
+                                        <label htmlFor="schoolTypeMDCF" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">School Type</label>
                                         <select id="schoolTypeMDCF" value={settings.schoolDetails.schoolTypeMDCF} onChange={e => handleSchoolDetailsChange('schoolTypeMDCF', e.target.value)} className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5">
                                             <option value="">Select Type</option>
                                             <option value="Government">Government</option>
@@ -246,7 +240,7 @@ const SettingsPage: React.FC = () => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label htmlFor="schoolCategoryMDCF" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">School Category (for MDCF Report)</label>
+                                        <label htmlFor="schoolCategoryMDCF" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">School Category</label>
                                         <select id="schoolCategoryMDCF" value={settings.schoolDetails.schoolCategoryMDCF} onChange={e => handleSchoolDetailsChange('schoolCategoryMDCF', e.target.value)} className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5">
                                             <option value="Primary">Primary</option>
                                             <option value="Upper Primary">Upper Primary</option>
@@ -565,15 +559,19 @@ const SettingsPage: React.FC = () => {
                                     </div>
                                     {settings.inspectionReport.inspected && (
                                         <div className="p-3 border border-amber-300/50 dark:border-gray-600 rounded-lg">
-                                            <p className="text-xs font-medium text-stone-600 dark:text-gray-300 mb-2">Inspected by:</p>
-                                            <div className="grid grid-cols-2 gap-2 text-xs">
-                                                {(Object.keys(settings.inspectionReport.inspectedBy) as Array<keyof InspectionReport['inspectedBy']>).map(key => (
-                                                    <label key={key} className="flex items-center space-x-2">
-                                                        <input type="checkbox" checked={settings.inspectionReport.inspectedBy[key]} onChange={e => handleInspectionByChange(key, e.target.checked)} className="rounded text-amber-600 focus:ring-amber-500" />
-                                                        <span className="text-stone-700 dark:text-gray-300 capitalize">{key.replace(/([A-Z])/g, ' $1').replace('Smc', 'SMC')}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
+                                            <label htmlFor="inspected-by" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Inspected by:</label>
+                                            <select
+                                                id="inspected-by"
+                                                value={settings.inspectionReport.inspectedBy}
+                                                onChange={e => handleInspectionChange('inspectedBy', e.target.value as InspectionAuthority)}
+                                                className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg p-2.5 focus:ring-amber-500 focus:border-amber-500"
+                                            >
+                                                <option value="">Select Inspector</option>
+                                                <option value="Task Force">Members of Task Force</option>
+                                                <option value="District Officials">District Officials</option>
+                                                <option value="Block Officials">Block/Taluka Level Officials</option>
+                                                <option value="SMC Members">SMC Members</option>
+                                            </select>
                                         </div>
                                     )}
                                     <Input label="Number of untoward incidents" id="incidents" type="number" value={settings.inspectionReport.incidentsCount} onChange={e => handleInspectionChange('incidentsCount', e.target.value)} />
