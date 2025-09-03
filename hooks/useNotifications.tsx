@@ -106,7 +106,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode; setCurrentPag
         if (dayOfWeek !== 0 && dayOfWeek !== 1) { // Not Sunday or Monday
             const yesterday = new Date();
             yesterday.setDate(today.getDate() - 1);
-            const yesterdayString = yesterday.toISOString().slice(0, 10);
+            const yesterdayString = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
             const yesterdayEntryExists = data.entries.some(e => e.id === yesterdayString);
             
             if (!yesterdayEntryExists) {

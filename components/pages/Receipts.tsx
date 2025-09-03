@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
@@ -11,7 +11,13 @@ import { CategoryBalance, Category, Receipt } from '../../types';
 const Receipts: React.FC = () => {
     const { addReceipt, deleteReceipt, data } = useData();
     const { showToast } = useToast();
-    const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+
+    const todayString = useMemo(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }, []);
+
+    const [date, setDate] = useState(todayString);
     const [rice, setRice] = useState<Record<Category, string>>({ balvatika: '', primary: '', middle: '' });
     const [cash, setCash] = useState<Record<Category, string>>({ balvatika: '', primary: '', middle: '' });
     const [receiptToDelete, setReceiptToDelete] = useState<string | null>(null);
@@ -73,7 +79,7 @@ const Receipts: React.FC = () => {
             <div className="space-y-4">
                 <Card title="Add New Receipt">
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <Input label="Date" id="receipt-date" type="date" value={date} onChange={e => setDate(e.target.value)} required max={new Date().toISOString().slice(0, 10)}/>
+                        <Input label="Date" id="receipt-date" type="date" value={date} onChange={e => setDate(e.target.value)} required max={todayString}/>
                         
                         <fieldset className="border border-amber-300/50 dark:border-gray-600 rounded-lg p-3">
                             <legend className="text-sm font-medium text-amber-700 dark:text-amber-400 px-1">Rice Received (kg)</legend>

@@ -1,3 +1,4 @@
+
 import { AppData, Category, ClassRoll } from '../types';
 import { calculateMonthlySummary } from '../services/summaryCalculator';
 import { CLASS_STRUCTURE } from '../constants';
@@ -9,6 +10,10 @@ interface jsPDF {
 }
 
 declare const jspdf: any;
+
+const getLocalYYYYMMDD = (date: Date): string => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
 
 const calculateSectionTotals = (classes: ClassRoll[]) => {
     return classes.reduce((acc, cr) => {
@@ -35,8 +40,8 @@ const generateMDCFReport = (data: AppData, month: string): Blob => {
     const summary = calculateMonthlySummary(data, month);
     const { riceAbstracts, cashAbstracts, categoryTotals } = summary;
 
-    const monthDate = new Date(`${month}-02T00:00:00Z`);
-    const monthName = monthDate.toLocaleString('default', { month: 'long', timeZone: 'UTC' });
+    const monthDate = new Date(`${month}-02T00:00:00`);
+    const monthName = monthDate.toLocaleString('default', { month: 'long' });
     const year = monthDate.getFullYear();
 
     doc.setFont('helvetica', 'bold');
@@ -80,8 +85,8 @@ const generateMDCFReport = (data: AppData, month: string): Blob => {
 
     const mealDays = entries.filter(e => e.date.startsWith(month) && e.totalPresent > 0).length;
     const holidays = entries.filter(e => e.date.startsWith(month) && e.totalPresent === 0 && e.reasonForNoMeal?.toLowerCase().includes('holiday')).length;
-    const daysInMonth = new Date(year, monthDate.getUTCMonth() + 1, 0).getDate();
-    const sundays = Array.from({ length: daysInMonth }, (_, i) => new Date(year, monthDate.getUTCMonth(), i + 1).getDay()).filter(day => day === 0).length;
+    const daysInMonth = new Date(year, monthDate.getMonth() + 1, 0).getDate();
+    const sundays = Array.from({ length: daysInMonth }, (_, i) => new Date(year, monthDate.getMonth(), i + 1).getDay()).filter(day => day === 0).length;
     const schoolDays = daysInMonth - sundays - holidays;
 
     doc.setFont('helvetica', 'bold');
@@ -250,8 +255,8 @@ const generateDailyConsumptionReport = (data: AppData, month: string): Blob => {
     const doc = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) as jsPDF;
     const { settings, entries } = data;
     const monthEntries = entries.filter(e => e.date.startsWith(month));
-    const monthDate = new Date(`${month}-02T00:00:00Z`);
-    const monthName = monthDate.toLocaleString('default', { month: 'long', timeZone: 'UTC' });
+    const monthDate = new Date(`${month}-02T00:00:00`);
+    const monthName = monthDate.toLocaleString('default', { month: 'long' });
     const year = monthDate.getFullYear();
 
     const categories: Category[] = ['balvatika', 'primary', 'middle'];
@@ -287,12 +292,13 @@ const generateDailyConsumptionReport = (data: AppData, month: string): Blob => {
 
         const head = [['Date', 'Present', 'Rice (kg)', 'Dal/Veg (Rs)', 'Oil/Cond (Rs)', 'Salt (Rs)', 'Fuel (Rs)', 'Total (Rs)', 'Reason for No Meal']];
         const body = [];
-        const daysInMonth = new Date(year, monthDate.getUTCMonth() + 1, 0).getDate();
+        const daysInMonth = new Date(year, monthDate.getMonth() + 1, 0).getDate();
         const totals = { present: 0, rice: 0, dalVeg: 0, oilCond: 0, salt: 0, fuel: 0, cost: 0 };
 
         for (let i = 1; i <= daysInMonth; i++) {
-            const date = new Date(Date.UTC(year, monthDate.getUTCMonth(), i));
-            const entry = monthEntries.find(e => e.id === date.toISOString().slice(0, 10));
+            const date = new Date(year, monthDate.getMonth(), i);
+            const dateString = getLocalYYYYMMDD(date);
+            const entry = monthEntries.find(e => e.id === dateString);
             
             const present = entry?.present[category] || 0;
             const dailyRice = (present * rates.rice[category]) / 1000;

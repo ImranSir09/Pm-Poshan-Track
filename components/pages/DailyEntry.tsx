@@ -42,7 +42,10 @@ const DailyEntryPage: React.FC = () => {
         return totals;
     }, [settings.classRolls]);
     
-    const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+    const today = useMemo(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }, []);
     const [selectedDate, setSelectedDate] = useState(today);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [present, setPresent] = useState({ balvatika: 0, primary: 0, middle: 0 });

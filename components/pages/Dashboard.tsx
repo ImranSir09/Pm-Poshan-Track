@@ -8,6 +8,7 @@ import { useToast } from '../../hooks/useToast';
 import IllustrationCard from '../ui/IllustrationCard';
 import Skeleton from '../ui/Skeleton';
 import DailyEntryPage from './DailyEntry';
+import { calculateMonthlySummary } from '../../services/summaryCalculator';
 
 const Dashboard: React.FC = () => {
     const { data } = useData();
@@ -19,13 +20,14 @@ const Dashboard: React.FC = () => {
     const [dashboardData, setDashboardData] = useState<{
         totalExpenditure: number;
         totalRice: number;
+        mealDays: number;
         monthlyData: { name: string; date: Date; balvatika: number; primary: number; middle: number; total: number }[];
-    }>({ totalExpenditure: 0, totalRice: 0, monthlyData: [] });
+    }>({ totalExpenditure: 0, totalRice: 0, mealDays: 0, monthlyData: [] });
 
     // Daily Entry Reminder
     useEffect(() => {
         const now = new Date();
-        const todayStr = now.toISOString().slice(0, 10);
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const entryExists = data.entries.some(e => e.id === todayStr);
 
         if (!entryExists && now.getHours() >= 15) { // 3 PM or later
@@ -34,21 +36,22 @@ const Dashboard: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const displayedMonthKey = useMemo(() => new Date().toISOString().slice(0, 7), []);
+    const displayedMonthKey = useMemo(() => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    }, []);
 
     useEffect(() => {
         setIsLoading(true);
-
-        const currentMonthEntries = data.entries.filter(entry => entry.date.startsWith(displayedMonthKey));
+        
+        const summary = calculateMonthlySummary(data, displayedMonthKey);
+        const { totals, monthEntries } = summary;
 
         // Create a Map for efficient lookups (O(1) on average) instead of using .find() in a loop
         const entriesMap = new Map<string, DailyEntry>();
-        for (const entry of currentMonthEntries) {
+        for (const entry of monthEntries) {
             entriesMap.set(entry.id, entry);
         }
-        
-        const totalExpenditure = currentMonthEntries.reduce((sum, entry) => sum + entry.consumption.total, 0);
-        const totalRice = currentMonthEntries.reduce((sum, entry) => sum + entry.consumption.rice, 0);
 
         const currentDate = new Date(displayedMonthKey + '-02T00:00:00');
         const year = currentDate.getFullYear();
@@ -58,7 +61,7 @@ const Dashboard: React.FC = () => {
 
         for (let i = 1; i <= daysInMonth; i++) {
             const date = new Date(year, month, i);
-            const dateString = date.toISOString().slice(0, 10);
+            const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
             const entry = entriesMap.get(dateString);
             
             chartData.push({
@@ -71,9 +74,14 @@ const Dashboard: React.FC = () => {
             });
         }
 
-        setDashboardData({ totalExpenditure, totalRice, monthlyData: chartData });
+        setDashboardData({
+            totalExpenditure: totals.expenditure,
+            totalRice: totals.rice,
+            mealDays: monthEntries.filter(e => e.totalPresent > 0).length,
+            monthlyData: chartData
+        });
         setIsLoading(false);
-    }, [data.entries, displayedMonthKey]);
+    }, [data, displayedMonthKey]);
     
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
@@ -108,15 +116,19 @@ const Dashboard: React.FC = () => {
 
             <DailyEntryPage />
 
-            <Card title="This Month's Overview">
-                <div className="grid grid-cols-2 gap-4 text-center">
+            <Card title="This Month's Totals">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <p className="text-xs text-stone-500 dark:text-gray-400">Meal Days</p>
+                        <p className="text-lg font-bold text-amber-700 dark:text-amber-400">{dashboardData.mealDays}</p>
+                    </div>
                     <div>
                         <p className="text-xs text-stone-500 dark:text-gray-400">Total Expenditure</p>
                         <p className="text-lg font-bold text-amber-700 dark:text-amber-400">₹{dashboardData.totalExpenditure.toFixed(2)}</p>
                     </div>
                     <div>
-                        <p className="text-xs text-stone-500 dark:text-gray-400">Total Rice Consumed</p>
-                        <p className="text-lg font-bold text-amber-700 dark:text-amber-400">{dashboardData.totalRice.toFixed(2)} kg</p>
+                        <p className="text-xs text-stone-500 dark:text-gray-400">Total Rice</p>
+                        <p className="text-lg font-bold text-amber-700 dark:text-amber-400">{dashboardData.totalRice.toFixed(3)} kg</p>
                     </div>
                 </div>
             </Card>
