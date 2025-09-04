@@ -150,7 +150,7 @@ const generateMDCF = (data: AppData, selectedMonth: string): Blob => {
         ],
         theme: 'grid',
         styles: { fontSize: 8, cellPadding: 1.5 },
-        columnStyles: { 1: { halign: 'center' } }
+        columnStyles: { 0: { cellWidth: 150 }, 1: { halign: 'center' } }
     });
 
     // ======== 7. School Inspection ========
@@ -161,6 +161,7 @@ const generateMDCF = (data: AppData, selectedMonth: string): Blob => {
         body: [['School Inspection done during the month', 'Yes', 'No']],
         theme: 'grid',
         styles: { fontSize: 8, cellPadding: 1.5, valign: 'middle' },
+        columnStyles: { 0: { cellWidth: 130 }, 1: { halign: 'center' }, 2: { halign: 'center' } },
         didDrawCell: (data: any) => {
             if (data.row.index === 0 && data.column.index > 0) {
                 doc.rect(data.cell.x + 10, data.cell.y + 2, 3, 3);
@@ -176,7 +177,7 @@ const generateMDCF = (data: AppData, selectedMonth: string): Blob => {
         body: [['Number of Untoward Incidents Occurred', settings.inspectionReport.incidentsCount]],
         theme: 'grid',
         styles: { fontSize: 8, cellPadding: 1.5 },
-        columnStyles: { 1: { halign: 'center' } }
+        columnStyles: { 0: { cellWidth: 150 }, 1: { halign: 'center' } }
     });
 
     // ======== Signatures ========
@@ -238,7 +239,7 @@ const generateConsumptionRegister = (data: AppData, selectedMonth: string): Blob
 
         const totalRate = rates.dalVeg[category] + rates.oilCond[category] + rates.salt[category] + rates.fuel[category];
         const head = [
-            ['S.No', 'Date', 'Roll', 'Present', 'Rice Used\n(Kg)', 'Dal/Veg\n(₹)', 'Oil/Cond\n(₹)', 'Salt\n(₹)', 'Fuel\n(₹)', 'Total\n(₹)', 'Sign', 'Reason for No Meal'],
+            ['S.No', 'Date', 'Roll', 'Present', 'Rice Used\n(Kg)', 'Dal/Veg\n(Rs)', 'Oil/Cond\n(Rs)', 'Salt\n(Rs)', 'Fuel\n(Rs)', 'Total\n(Rs)', 'Sign', 'Reason for No Meal'],
             [
                  { content: `Rates/Student ->`, colSpan: 4, styles: { halign: 'right', fontStyle: 'italic', cellPadding: 1 } },
                  `@ ${(rates.rice[category] / 1000).toFixed(3)}`, 
@@ -311,11 +312,11 @@ const generateConsumptionRegister = (data: AppData, selectedMonth: string): Blob
 
         const abstractBody = [
             [{ content: 'Abstract of Rice', colSpan: 2, styles: { fontStyle: 'bold', halign: 'center' } }, { content: 'Abstract of Cash', colSpan: 2, styles: { fontStyle: 'bold', halign: 'center' } }],
-            ['1. Opening Balance:', `${riceAbstracts[category].opening.toFixed(3)} Kg`, '1. Opening Balance:', `₹ ${cashAbstracts[category].opening.toFixed(2)}`],
-            ['2. Quantity received:', `${riceAbstracts[category].received.toFixed(3)} Kg`, '2. Amount received:', `₹ ${cashAbstracts[category].received.toFixed(2)}`],
-            ['3. Total Quantity:', `${riceAbstracts[category].total.toFixed(3)} Kg`, '3. Total Amount:', `₹ ${cashAbstracts[category].total.toFixed(2)}`],
-            ['4. Rice Consumed:', `${riceAbstracts[category].consumed.toFixed(3)} Kg`, '4. Expenditure:', `₹ ${cashAbstracts[category].expenditure.toFixed(2)}`],
-            ['5. Closing Balance:', `${riceAbstracts[category].balance.toFixed(3)} Kg`, '5. closing balance:', `₹ ${cashAbstracts[category].balance.toFixed(2)}`],
+            ['1. Opening Balance:', `${riceAbstracts[category].opening.toFixed(3)} Kg`, '1. Opening Balance:', `Rs ${cashAbstracts[category].opening.toFixed(2)}`],
+            ['2. Quantity received:', `${riceAbstracts[category].received.toFixed(3)} Kg`, '2. Amount received:', `Rs ${cashAbstracts[category].received.toFixed(2)}`],
+            ['3. Total Quantity:', `${riceAbstracts[category].total.toFixed(3)} Kg`, '3. Total Amount:', `Rs ${cashAbstracts[category].total.toFixed(2)}`],
+            ['4. Rice Consumed:', `${riceAbstracts[category].consumed.toFixed(3)} Kg`, '4. Expenditure:', `Rs ${cashAbstracts[category].expenditure.toFixed(2)}`],
+            ['5. Closing Balance:', `${riceAbstracts[category].balance.toFixed(3)} Kg`, '5. closing balance:', `Rs ${cashAbstracts[category].balance.toFixed(2)}`],
         ];
 
         doc.autoTable({
