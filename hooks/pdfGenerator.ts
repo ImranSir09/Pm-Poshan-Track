@@ -150,7 +150,7 @@ const generateMDCF = (data: AppData, selectedMonth: string): Blob => {
         ],
         theme: 'grid',
         styles: { fontSize: 8, cellPadding: 1.5 },
-        columnStyles: { 0: { cellWidth: 150 }, 1: { halign: 'center' } }
+        columnStyles: { 0: { cellWidth: 80 }, 1: { halign: 'center' } }
     });
 
     // ======== 7. School Inspection ========
@@ -177,7 +177,7 @@ const generateMDCF = (data: AppData, selectedMonth: string): Blob => {
         body: [['Number of Untoward Incidents Occurred', settings.inspectionReport.incidentsCount]],
         theme: 'grid',
         styles: { fontSize: 8, cellPadding: 1.5 },
-        columnStyles: { 0: { cellWidth: 150 }, 1: { halign: 'center' } }
+        columnStyles: { 0: { cellWidth: 80 }, 1: { halign: 'center' } }
     });
 
     // ======== Signatures ========
