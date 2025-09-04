@@ -1,4 +1,3 @@
-
 import { AppData, Category, ClassRoll } from '../types';
 import { calculateMonthlySummary } from '../services/summaryCalculator';
 import { CLASS_STRUCTURE } from '../constants';
@@ -79,6 +78,11 @@ const generateMDCF = (data: AppData, selectedMonth: string): Blob => {
     });
 
     // ======== 2. Meals Availed Status ========
+    const actualDaysServed = {
+        balvatika: monthEntries.filter(e => e.present.balvatika > 0).length,
+        primary: monthEntries.filter(e => e.present.primary > 0).length,
+        middle: monthEntries.filter(e => e.present.middle > 0).length,
+    };
     doc.setFontSize(10).setFont(undefined, 'bold');
     doc.text('2. Meals Availed Status', 14, doc.lastAutoTable.finalY + 6);
     doc.autoTable({
@@ -86,6 +90,7 @@ const generateMDCF = (data: AppData, selectedMonth: string): Blob => {
         head: [['', 'Bal Vatika', 'Primary', 'Upper Primary']],
         body: [
             ['Number of School days during month', monthEntries.length, monthEntries.length, monthEntries.length],
+            ['Number of actual days MDM served', actualDaysServed.balvatika, actualDaysServed.primary, actualDaysServed.middle],
             ['Total Meals served during the month', categoryTotals.present.balvatika, categoryTotals.present.primary, categoryTotals.present.middle],
         ],
         theme: 'grid',
@@ -185,9 +190,6 @@ const generateMDCF = (data: AppData, selectedMonth: string): Blob => {
     doc.setFontSize(9).setFont(undefined, 'normal');
     doc.text('.........................................', 120, finalY + 20);
     doc.text('Signature of Head Teacher', 120, finalY + 24);
-    if (settings.mdmIncharge.name) {
-        doc.text(`(${settings.mdmIncharge.name})`, 120, finalY + 28);
-    }
 
     return doc.output('blob');
 };
@@ -198,7 +200,7 @@ const generateConsumptionRegister = (data: AppData, selectedMonth: string): Blob
     const summary = calculateMonthlySummary(data, selectedMonth);
     const { monthEntries, riceAbstracts, cashAbstracts } = summary;
     
-    const doc = new jspdf.jsPDF({ orientation: 'landscape' });
+    const doc = new jspdf.jsPDF({ orientation: 'portrait' });
     let isFirstCategoryPage = true;
     
     const categories: Category[] = ['balvatika', 'primary', 'middle'];
@@ -220,7 +222,7 @@ const generateConsumptionRegister = (data: AppData, selectedMonth: string): Blob
         if (!hasStudentsOnRoll || !hasActivity) return;
 
         if (!isFirstCategoryPage) {
-            doc.addPage('a4', 'landscape');
+            doc.addPage();
         }
         isFirstCategoryPage = false;
         
@@ -239,7 +241,7 @@ const generateConsumptionRegister = (data: AppData, selectedMonth: string): Blob
 
         const totalRate = rates.dalVeg[category] + rates.oilCond[category] + rates.salt[category] + rates.fuel[category];
         const head = [
-            ['S.No', 'Date', 'Roll', 'Present', 'Rice Used\n(Kg)', 'Dal/Veg\n(Rs)', 'Oil/Cond\n(Rs)', 'Salt\n(Rs)', 'Fuel\n(Rs)', 'Total\n(Rs)', 'Sign', 'Reason for No Meal'],
+            ['S.No', 'Date', 'Roll', 'Present', 'Rice Used\n(Kg)', 'Dal/Veg\n(Rs)', 'Oil/Cond\n(Rs)', 'Salt\n(Rs)', 'Fuel\n(Rs)', 'Total\n(Rs)', 'Sign', 'Reason for\nNo Meal'],
             [
                  { content: `Rates/Student ->`, colSpan: 4, styles: { halign: 'right', fontStyle: 'italic', cellPadding: 1 } },
                  `@ ${(rates.rice[category] / 1000).toFixed(3)}`, 
@@ -325,10 +327,23 @@ const generateConsumptionRegister = (data: AppData, selectedMonth: string): Blob
             body: body,
             foot: foot,
             theme: 'grid',
-            styles: { fontSize: 8, cellPadding: 1, halign: 'center' },
-            headStyles: { fontStyle: 'bold', fillColor: [230, 230, 230], textColor: 0, lineWidth: 0.1 },
+            styles: { fontSize: 7, cellPadding: 1, halign: 'center' },
+            headStyles: { fontStyle: 'bold', fillColor: [230, 230, 230], textColor: 0, lineWidth: 0.1, fontSize: 7 },
             footStyles: { fontStyle: 'bold', fillColor: [230, 230, 230], textColor: 0, lineWidth: 0.1 },
-            columnStyles: { 1: { halign: 'left' }, 11: { cellWidth: 30, halign: 'left' } },
+            columnStyles: {
+                0: { cellWidth: 7 },
+                1: { cellWidth: 16, halign: 'left' },
+                2: { cellWidth: 10 },
+                3: { cellWidth: 10 },
+                4: { cellWidth: 15 },
+                5: { cellWidth: 15 },
+                6: { cellWidth: 15 },
+                7: { cellWidth: 15 },
+                8: { cellWidth: 15 },
+                9: { cellWidth: 15 },
+                10: { cellWidth: 12 },
+                11: { cellWidth: 35, halign: 'left' }
+            },
             didDrawPage: function(hookData: any) {
                  doc.autoTable({
                     startY: hookData.cursor.y + 5,
@@ -418,9 +433,9 @@ const generateRollStatement = (data: AppData): Blob => {
         ]);
     };
 
-    addSectionToBody('Pre-Primary', prePrimaryClasses, prePrimaryTotals);
-    addSectionToBody('Primary (I-V)', primaryClasses, primaryTotals);
     addSectionToBody('Middle (VI-VIII)', middleClasses, middleTotals);
+    addSectionToBody('Primary (I-V)', primaryClasses, primaryTotals);
+    addSectionToBody('Pre-Primary', prePrimaryClasses, prePrimaryTotals);
     
     const foot = [[
         { content: 'Grand Total', styles: { fontStyle: 'bold' } },

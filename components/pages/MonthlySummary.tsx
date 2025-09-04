@@ -99,7 +99,8 @@ const MonthlySummary: React.FC = () => {
         if (closingBalance && monthEntries.length > 0) {
             saveMonthlyBalance(selectedMonth, closingBalance);
         }
-    }, [selectedMonth, closingBalance, saveMonthlyBalance, monthEntries.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedMonth, monthEntries.length, saveMonthlyBalance, JSON.stringify(closingBalance)]);
 
     const dailyDataForCategory = useMemo(() => {
         if (view === 'overall') return null;

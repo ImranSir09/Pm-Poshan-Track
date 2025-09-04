@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -71,7 +72,12 @@ const Reports: React.FC = () => {
             const a = document.createElement('a');
             a.href = url;
             const schoolName = data.settings.schoolDetails.name.replace(/\s+/g, '_');
-            a.download = `PM_POSHAN_Backup_${schoolName}_${new Date().toISOString().slice(0, 10)}.json`;
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const dateString = `${yyyy}-${mm}-${dd}`;
+            a.download = `PM_POSHAN_Backup_${schoolName}_${dateString}.json`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);

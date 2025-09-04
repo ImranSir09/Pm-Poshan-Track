@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { nanoid } from 'nanoid';
 import { Accordion, AccordionItem } from '../ui/Accordion';
@@ -399,9 +400,9 @@ const SettingsPage: React.FC = () => {
                                 </thead>
                                 <tbody>
                                     {[
-                                        { title: 'Pre-Primary', classes: prePrimaryClasses, totals: prePrimaryTotals },
+                                        { title: 'Middle (VI-VIII)', classes: middleClasses, totals: middleTotals },
                                         { title: 'Primary (I-V)', classes: primaryClasses, totals: primaryTotals },
-                                        { title: 'Middle (VI-VIII)', classes: middleClasses, totals: middleTotals }
+                                        { title: 'Pre-Primary', classes: prePrimaryClasses, totals: prePrimaryTotals }
                                     ].map(section => section.classes.length > 0 && (
                                         <React.Fragment key={section.title}>
                                             <tr className="bg-amber-100/40 dark:bg-gray-700/50">
