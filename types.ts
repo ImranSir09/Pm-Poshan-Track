@@ -1,6 +1,7 @@
 
+import { Page } from './App';
 
-export type Page = 'dashboard' | 'summary' | 'receipts' | 'settings' | 'reports';
+export { Page };
 
 export interface Notification {
   id: string; // e.g., 'low-stock', 'backup-reminder'
@@ -12,7 +13,6 @@ export interface Notification {
   actionPayload?: any;
 }
 
-// FIX: Added AbstractData interface to be used in monthly summaries.
 export interface AbstractData {
     opening: number;
     received: number;
@@ -153,7 +153,15 @@ export interface MonthlyBalance {
     [key: string]: MonthlyBalanceData; // key is YYYY-MM
 }
 
+export interface AuthData {
+    username: string;
+    password?: string;
+    securityQuestion: string;
+    securityAnswer: string;
+}
+
 export interface AppData {
+    auth?: AuthData;
     settings: Settings;
     entries: DailyEntry[];
     receipts: Receipt[];

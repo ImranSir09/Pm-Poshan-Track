@@ -10,6 +10,7 @@ import { Settings, SchoolDetails, Rates, Category, CookCumHelper, ClassRoll, Mon
 import { useToast } from '../../hooks/useToast';
 import { CLASS_STRUCTURE } from '../../constants';
 import { indianStates, jkDistrictsWithZones } from '../../data/locations';
+import { validateSettings } from '../../services/validator';
 
 
 const calculateSectionTotals = (classes: ClassRoll[]) => {
@@ -172,13 +173,19 @@ const SettingsPage: React.FC = () => {
     };
     
     const handleSave = () => {
+        const validationErrors = validateSettings(settings);
+        
         const isUdiseCorrectLength = settings.schoolDetails.udise.length === 11 || settings.schoolDetails.udise.length === 0;
         setIsUdiseValid(isUdiseCorrectLength);
-
         if (!isUdiseCorrectLength) {
-            showToast('UDISE code must be 11 digits.', 'error');
+            validationErrors.push('UDISE code must be 11 digits long.');
+        }
+
+        if (validationErrors.length > 0) {
+            validationErrors.forEach(error => showToast(error, 'error'));
             return;
         }
+
         updateSettings(settings);
         showToast('Settings saved successfully!', 'success');
     };
@@ -215,7 +222,7 @@ const SettingsPage: React.FC = () => {
                             <div>
                                 <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-2">School Information</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <Input containerClassName="md:col-span-2" label="School Name" id="schoolName" value={settings.schoolDetails.name} onChange={e => handleSchoolDetailsChange('name', e.target.value)} />
+                                    <Input containerClassName="md:col-span-2" label="School Name" id="schoolName" value={settings.schoolDetails.name} onChange={e => handleSchoolDetailsChange('name', e.target.value)} required />
                                     <div className="md:col-span-2">
                                         <Input 
                                             label="UDISE Code (11 digits)" 
@@ -231,7 +238,7 @@ const SettingsPage: React.FC = () => {
                                     
                                     <div>
                                         <label htmlFor="schoolTypeMDCF" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">School Type</label>
-                                        <select id="schoolTypeMDCF" value={settings.schoolDetails.schoolTypeMDCF} onChange={e => handleSchoolDetailsChange('schoolTypeMDCF', e.target.value)} className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5">
+                                        <select id="schoolTypeMDCF" value={settings.schoolDetails.schoolTypeMDCF} onChange={e => handleSchoolDetailsChange('schoolTypeMDCF', e.target.value)} className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5" required>
                                             <option value="">Select Type</option>
                                             <option value="Government">Government</option>
                                             <option value="Local Body">Local Body</option>
@@ -242,7 +249,7 @@ const SettingsPage: React.FC = () => {
                                     </div>
                                     <div>
                                         <label htmlFor="schoolCategoryMDCF" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">School Category</label>
-                                        <select id="schoolCategoryMDCF" value={settings.schoolDetails.schoolCategoryMDCF} onChange={e => handleSchoolDetailsChange('schoolCategoryMDCF', e.target.value)} className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5">
+                                        <select id="schoolCategoryMDCF" value={settings.schoolDetails.schoolCategoryMDCF} onChange={e => handleSchoolDetailsChange('schoolCategoryMDCF', e.target.value)} className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5" required>
                                             <option value="Primary">Primary</option>
                                             <option value="Upper Primary">Upper Primary</option>
                                             <option value="Primary with Upper Primary">Primary with Upper Primary</option>
@@ -257,6 +264,7 @@ const SettingsPage: React.FC = () => {
                                             value={settings.schoolDetails.state}
                                             onChange={e => handleSchoolDetailsChange('state', e.target.value)}
                                             className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5"
+                                            required
                                         >
                                             <option value="">Select State</option>
                                             {indianStates.map(state => (
@@ -272,6 +280,7 @@ const SettingsPage: React.FC = () => {
                                             onChange={e => handleSchoolDetailsChange('district', e.target.value)}
                                             disabled={!settings.schoolDetails.state || availableDistricts.length === 0}
                                             className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            required
                                         >
                                             <option value="">Select District</option>
                                             {availableDistricts.map(district => (
@@ -288,6 +297,7 @@ const SettingsPage: React.FC = () => {
                                                 onChange={e => handleSchoolDetailsChange('block', e.target.value)}
                                                 disabled={!settings.schoolDetails.district || availableZones.length === 0}
                                                 className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                required
                                             >
                                                 <option value="">Select Zone</option>
                                                 {availableZones.map(zone => (
@@ -296,9 +306,9 @@ const SettingsPage: React.FC = () => {
                                             </select>
                                         </div>
                                     ) : (
-                                        <Input label="Block" id="block" value={settings.schoolDetails.block} onChange={e => handleSchoolDetailsChange('block', e.target.value)} />
+                                        <Input label="Block" id="block" value={settings.schoolDetails.block} onChange={e => handleSchoolDetailsChange('block', e.target.value)} required />
                                     )}
-                                    <Input label="Village/Ward" id="village" value={settings.schoolDetails.village} onChange={e => handleSchoolDetailsChange('village', e.target.value)} />
+                                    <Input label="Village/Ward" id="village" value={settings.schoolDetails.village} onChange={e => handleSchoolDetailsChange('village', e.target.value)} required />
                                 </div>
                             </div>
 
@@ -310,6 +320,7 @@ const SettingsPage: React.FC = () => {
                                         id="incharge-name" 
                                         value={settings.mdmIncharge?.name || ''} 
                                         onChange={e => handleInchargeChange('name', e.target.value)} 
+                                        required
                                     />
                                     <Input 
                                         label="Contact Number" 
@@ -356,6 +367,7 @@ const SettingsPage: React.FC = () => {
                                     <Input 
                                         label="Low Rice Threshold (kg)" 
                                         id="low-rice" type="number" 
+                                        min="0"
                                         value={settings.notificationSettings.lowRiceThreshold} 
                                         onChange={e => handleNotificationChange('lowRiceThreshold', e.target.value)} 
                                     />
@@ -363,6 +375,7 @@ const SettingsPage: React.FC = () => {
                                         label="Low Cash Threshold (₹)" 
                                         id="low-cash" 
                                         type="number" 
+                                        min="0"
                                         value={settings.notificationSettings.lowCashThreshold} 
                                         onChange={e => handleNotificationChange('lowCashThreshold', e.target.value)} 
                                     />
@@ -370,6 +383,7 @@ const SettingsPage: React.FC = () => {
                                         label="Backup Reminder Frequency (days)" 
                                         id="backup-freq" 
                                         type="number" 
+                                        min="0"
                                         value={settings.notificationSettings.backupReminderFrequency} 
                                         onChange={e => handleNotificationChange('backupReminderFrequency', e.target.value)} 
                                     />
@@ -415,10 +429,10 @@ const SettingsPage: React.FC = () => {
                                                 return (
                                                     <tr key={cr.id} className="border-b border-amber-200/50 dark:border-gray-700">
                                                         <td className="p-1 border border-amber-300/50 dark:border-gray-600 font-semibold">{cr.name}</td>
-                                                        <td className="p-1 border border-amber-300/50 dark:border-gray-600"><input type="number" value={cr.general.boys} onChange={e => handleClassRollChange(cr.id, 'general', 'boys', e.target.value)} className="w-12 bg-amber-100/60 dark:bg-gray-700/50 rounded p-1 text-center"/></td>
-                                                        <td className="p-1 border border-amber-300/50 dark:border-gray-600"><input type="number" value={cr.general.girls} onChange={e => handleClassRollChange(cr.id, 'general', 'girls', e.target.value)} className="w-12 bg-amber-100/60 dark:bg-gray-700/50 rounded p-1 text-center"/></td>
-                                                        <td className="p-1 border border-amber-300/50 dark:border-gray-600"><input type="number" value={cr.stsc.boys} onChange={e => handleClassRollChange(cr.id, 'stsc', 'boys', e.target.value)} className="w-12 bg-amber-100/60 dark:bg-gray-700/50 rounded p-1 text-center"/></td>
-                                                        <td className="p-1 border border-amber-300/50 dark:border-gray-600"><input type="number" value={cr.stsc.girls} onChange={e => handleClassRollChange(cr.id, 'stsc', 'girls', e.target.value)} className="w-12 bg-amber-100/60 dark:bg-gray-700/50 rounded p-1 text-center"/></td>
+                                                        <td className="p-1 border border-amber-300/50 dark:border-gray-600"><input type="number" min="0" value={cr.general.boys} onChange={e => handleClassRollChange(cr.id, 'general', 'boys', e.target.value)} className="w-12 bg-amber-100/60 dark:bg-gray-700/50 rounded p-1 text-center"/></td>
+                                                        <td className="p-1 border border-amber-300/50 dark:border-gray-600"><input type="number" min="0" value={cr.general.girls} onChange={e => handleClassRollChange(cr.id, 'general', 'girls', e.target.value)} className="w-12 bg-amber-100/60 dark:bg-gray-700/50 rounded p-1 text-center"/></td>
+                                                        <td className="p-1 border border-amber-300/50 dark:border-gray-600"><input type="number" min="0" value={cr.stsc.boys} onChange={e => handleClassRollChange(cr.id, 'stsc', 'boys', e.target.value)} className="w-12 bg-amber-100/60 dark:bg-gray-700/50 rounded p-1 text-center"/></td>
+                                                        <td className="p-1 border border-amber-300/50 dark:border-gray-600"><input type="number" min="0" value={cr.stsc.girls} onChange={e => handleClassRollChange(cr.id, 'stsc', 'girls', e.target.value)} className="w-12 bg-amber-100/60 dark:bg-gray-700/50 rounded p-1 text-center"/></td>
                                                         <td className="p-1 border border-amber-300/50 dark:border-gray-600 font-bold">{totalBoys}</td>
                                                         <td className="p-1 border border-amber-300/50 dark:border-gray-600 font-bold">{totalGirls}</td>
                                                         <td className="p-1 border border-amber-300/50 dark:border-gray-600 font-bold text-amber-700 dark:text-amber-400">{onRoll}</td>
@@ -465,6 +479,7 @@ const SettingsPage: React.FC = () => {
                                         id="mme-expenditure" 
                                         type="number" 
                                         step="0.01"
+                                        min="0"
                                         value={settings.mmeExpenditure || 0}
                                         onChange={e => setSettings(prev => ({ ...prev, mmeExpenditure: parseFloat(e.target.value) || 0 }))}
                                     />
@@ -499,7 +514,7 @@ const SettingsPage: React.FC = () => {
                                                 <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">Cook #{index + 1}</p>
                                                 <Button variant="danger" className="px-2 py-1 text-xs" onClick={() => removeCook(cook.id)}>Remove</Button>
                                             </div>
-                                            <Input label="Name" id={`cook-name-${cook.id}`} value={cook.name} onChange={e => handleCookChange(cook.id, 'name', e.target.value)} />
+                                            <Input label="Name" id={`cook-name-${cook.id}`} value={cook.name} onChange={e => handleCookChange(cook.id, 'name', e.target.value)} required />
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div>
                                                     <label className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Gender</label>
@@ -528,7 +543,7 @@ const SettingsPage: React.FC = () => {
                                                         <option value="Cheque">Cheque</option>
                                                     </select>
                                                 </div>
-                                                <Input label="Amount Paid (₹)" id={`cook-amount-${cook.id}`} type="number" value={cook.amountPaid} onChange={e => handleCookChange(cook.id, 'amountPaid', parseFloat(e.target.value) || 0)} />
+                                                <Input label="Amount Paid (₹)" id={`cook-amount-${cook.id}`} type="number" min="0" value={cook.amountPaid} onChange={e => handleCookChange(cook.id, 'amountPaid', parseFloat(e.target.value) || 0)} />
                                             </div>
                                         </div>
                                     ))}
@@ -539,10 +554,10 @@ const SettingsPage: React.FC = () => {
                             <div>
                                 <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-2">Health Status</h3>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <Input label="IFA Tablets (Boys)" id="ifa-boys" type="number" value={settings.healthStatus.ifaBoys} onChange={e => handleHealthChange('ifaBoys', e.target.value)} />
-                                    <Input label="IFA Tablets (Girls)" id="ifa-girls" type="number" value={settings.healthStatus.ifaGirls} onChange={e => handleHealthChange('ifaGirls', e.target.value)} />
-                                    <Input label="Screened by RBSK Team" id="screened-rbsk" type="number" value={settings.healthStatus.screenedByRBSK} onChange={e => handleHealthChange('screenedByRBSK', e.target.value)} />
-                                    <Input label="Referred by RBSK Team" id="referred-rbsk" type="number" value={settings.healthStatus.referredByRBSK} onChange={e => handleHealthChange('referredByRBSK', e.target.value)} />
+                                    <Input label="IFA Tablets (Boys)" id="ifa-boys" type="number" min="0" value={settings.healthStatus.ifaBoys} onChange={e => handleHealthChange('ifaBoys', e.target.value)} />
+                                    <Input label="IFA Tablets (Girls)" id="ifa-girls" type="number" min="0" value={settings.healthStatus.ifaGirls} onChange={e => handleHealthChange('ifaGirls', e.target.value)} />
+                                    <Input label="Screened by RBSK Team" id="screened-rbsk" type="number" min="0" value={settings.healthStatus.screenedByRBSK} onChange={e => handleHealthChange('screenedByRBSK', e.target.value)} />
+                                    <Input label="Referred by RBSK Team" id="referred-rbsk" type="number" min="0" value={settings.healthStatus.referredByRBSK} onChange={e => handleHealthChange('referredByRBSK', e.target.value)} />
                                 </div>
                             </div>
 
@@ -575,7 +590,7 @@ const SettingsPage: React.FC = () => {
                                             </select>
                                         </div>
                                     )}
-                                    <Input label="Number of untoward incidents" id="incidents" type="number" value={settings.inspectionReport.incidentsCount} onChange={e => handleInspectionChange('incidentsCount', e.target.value)} />
+                                    <Input label="Number of untoward incidents" id="incidents" type="number" min="0" value={settings.inspectionReport.incidentsCount} onChange={e => handleInspectionChange('incidentsCount', e.target.value)} />
                                 </div>
                             </div>
                         </div>

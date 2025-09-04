@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -105,7 +104,6 @@ const Reports: React.FC = () => {
                 if (typeof text !== 'string') throw new Error('Invalid file content');
                 const parsedData = JSON.parse(text) as AppData;
                 importData(parsedData);
-                showToast('Data imported successfully!', 'success');
             } catch (error) {
                 showToast('Failed to import data. Invalid file format.', 'error');
                 console.error(error);
@@ -227,7 +225,7 @@ const Reports: React.FC = () => {
                         </div>
                         <div className="text-xs pt-2 border-t border-amber-200/50 dark:border-white/10">
                             <p><strong>App Version:</strong> 1.2.1</p>
-                            <p><strong>Developer:</strong> Emraan Mugloo</p>
+                            <p><strong>Developer:</strong> Imran Gani Mugloo</p>
                             <p><strong>Contact:</strong> <a href="tel:+919149690096" className="text-amber-600 dark:text-amber-400 hover:underline">+91 9149690096</a></p>
                             <p><strong>Email:</strong> <a href="mailto:emraanmugloo123@gmail.com" className="text-amber-600 dark:text-amber-400 hover:underline">emraanmugloo123@gmail.com</a></p>
                             <p><strong>Website:</strong> <a href="https://imransir09.github.io/Pm-Poshan-Track/" target="_blank" rel="noopener noreferrer" className="text-amber-600 dark:text-amber-400 hover:underline">Pm-Poshan-Track</a></p>

@@ -1,5 +1,4 @@
 
-
 import { Settings, ClassRoll } from './types';
 
 export const CLASS_STRUCTURE: { id: string, name: string }[] = [
@@ -15,6 +14,8 @@ export const CLASS_STRUCTURE: { id: string, name: string }[] = [
     { id: 'pp1', name: 'PP1' },
     { id: 'pp2', name: 'PP2' },
 ];
+
+export const SIGNUP_KEY = 'PM-POSHAN-2024';
 
 export const DEFAULT_SETTINGS: Settings = {
     schoolDetails: {

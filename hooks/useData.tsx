@@ -1,7 +1,5 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-// FIX: Import InspectionAuthority to resolve type error during data migration.
-import { AppData, DailyEntry, Receipt, Settings, MonthlyBalanceData, MonthlyBalance, InspectionAuthority } from '../types';
+import { AppData, DailyEntry, Receipt, Settings, MonthlyBalanceData, MonthlyBalance, InspectionAuthority, AuthData } from '../types';
 import { DEFAULT_SETTINGS } from '../constants';
 import { showToast } from './useToast';
 
@@ -39,6 +37,10 @@ const getInitialData = (): AppData => {
             // Backward compatibility/migration for settings
             const mergedSettings = deepMerge(DEFAULT_SETTINGS, parsedData.settings);
             parsedData.settings = mergedSettings;
+
+            if (!parsedData.auth) {
+                parsedData.auth = { username: '', securityQuestion: '', securityAnswer: '' };
+            }
 
             // MIGRATION: Convert old inspection report object to new string format
             if (parsedData.settings?.inspectionReport?.inspectedBy && isObject(parsedData.settings.inspectionReport.inspectedBy)) {
@@ -83,6 +85,7 @@ const getInitialData = (): AppData => {
         console.error("Failed to parse data from localStorage", error);
     }
     return {
+        auth: { username: '', securityQuestion: '', securityAnswer: '' },
         settings: DEFAULT_SETTINGS,
         entries: [],
         receipts: [],
@@ -104,6 +107,7 @@ interface DataContextType {
     importData: (importedData: AppData) => void;
     resetData: () => void;
     updateLastBackupDate: () => void;
+    updateAuth: (authData: AuthData) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -114,6 +118,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useEffect(() => {
         const handler = setTimeout(() => {
             try {
+                // Persist the entire app state to localStorage.
+                // This ensures that authentication state is preserved across reloads and after imports.
                 localStorage.setItem(APP_DATA_KEY, JSON.stringify(data));
             } catch (error) {
                 console.error("Failed to save data to localStorage", error);
@@ -171,6 +177,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const updateSettings = useCallback((settings: Settings) => {
         setData(prevData => ({ ...prevData, settings }));
     }, []);
+    
+    const updateAuth = useCallback((authData: AuthData) => {
+        // Asynchronously update auth data; the useEffect will handle saving.
+        setData(prevData => ({ ...prevData, auth: authData }));
+    }, []);
 
     const saveMonthlyBalance = useCallback((monthKey: string, balance: MonthlyBalanceData) => {
         setData(prevData => ({
@@ -187,21 +198,52 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     const importData = useCallback((importedData: AppData) => {
-        setData(importedData);
-    }, []);
+        let finalData = importedData;
+
+        // If the imported backup file lacks a password (e.g., from an older app version),
+        // preserve the existing authentication data. This prevents the user from being
+        // redirected to the setup page.
+        if (!importedData.auth?.password) {
+            finalData = { ...importedData, auth: data.auth };
+        }
+
+        try {
+            // Synchronously save the complete new dataset to localStorage. This is critical
+            // to prevent data loss or state inconsistencies if the user reloads the page.
+            localStorage.setItem(APP_DATA_KEY, JSON.stringify(finalData));
+            showToast('Data imported! The app will now reload.', 'success');
+
+            // Reload the application after a short delay to ensure it starts fresh
+            // with the newly imported and persisted state. This provides the most stable experience.
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+
+        } catch (error) {
+            console.error("Failed to save imported data to localStorage", error);
+            showToast("Could not save imported data. Storage may be full.", "error");
+        }
+    }, [data.auth]);
 
     const resetData = useCallback(() => {
+        // Clear storage synchronously to ensure a clean state on reload
+        localStorage.removeItem(APP_DATA_KEY);
+        sessionStorage.removeItem('pm-poshan-auth');
+
         setData({
+            auth: { username: '', securityQuestion: '', securityAnswer: '' },
             settings: DEFAULT_SETTINGS,
             entries: [],
             receipts: [],
             monthlyBalances: {},
             lastBackupDate: undefined,
         });
+
+        window.location.reload();
     }, []);
 
     return (
-        <DataContext.Provider value={{ data, setData, addEntry, deleteEntry, addReceipt, deleteReceipt, updateSettings, saveMonthlyBalance, importData, resetData, updateLastBackupDate }}>
+        <DataContext.Provider value={{ data, setData, addEntry, deleteEntry, addReceipt, deleteReceipt, updateSettings, saveMonthlyBalance, importData, resetData, updateLastBackupDate, updateAuth }}>
             {children}
         </DataContext.Provider>
     );

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
@@ -44,6 +43,11 @@ const Receipts: React.FC = () => {
             primary: parseFloat(cash.primary) || 0,
             middle: parseFloat(cash.middle) || 0,
         };
+
+        if (Object.values(riceBalance).some(v => v < 0) || Object.values(cashBalance).some(v => v < 0)) {
+            showToast('Receipt values cannot be negative.', 'error');
+            return;
+        }
 
         const totalRice = riceBalance.balvatika + riceBalance.primary + riceBalance.middle;
         const totalCash = cashBalance.balvatika + cashBalance.primary + cashBalance.middle;
