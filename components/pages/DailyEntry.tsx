@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -210,6 +209,19 @@ const DailyEntryPage: React.FC = () => {
         initiateSaveProcess(zeroEntry);
     };
 
+    const handleMarkAsSunday = () => {
+        const sundayEntry: DailyEntry = {
+            id: today,
+            date: today,
+            present: { balvatika: 0, primary: 0, middle: 0 },
+            totalPresent: 0,
+            consumption: { rice: 0, dalVeg: 0, oilCond: 0, salt: 0, fuel: 0, total: 0 },
+            reasonForNoMeal: 'Sunday',
+        };
+        // Overwrite to make it a one-click action
+        initiateSaveProcess(sundayEntry, true);
+    };
+
     const confirmOverwrite = () => {
         if (pendingEntry) {
             initiateSaveProcess(pendingEntry, true);
@@ -332,17 +344,23 @@ const DailyEntryPage: React.FC = () => {
                                     <p className="text-sm text-stone-500 dark:text-gray-400">{new Date(today + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}</p>
                                 </div>
                                 <div className="text-right">
-                                    <Button onClick={() => { setSelectedDate(today); setEntryModalOpen(true); }} disabled={isSunday}>
-                                        Add / Edit
-                                    </Button>
+                                    {isSunday && selectedDate === today ? (
+                                        <Button onClick={handleMarkAsSunday} variant="secondary">
+                                            Mark as Sunday
+                                        </Button>
+                                    ) : (
+                                        <Button onClick={() => { setSelectedDate(today); setEntryModalOpen(true); }} disabled={isSunday}>
+                                            Add / Edit
+                                        </Button>
+                                    )}
                                     <button onClick={() => setShowDatePicker(true)} className="block w-full text-center text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 text-xs pt-1">
                                         Edit another...
                                     </button>
                                 </div>
                             </div>
                             {isSunday && selectedDate === today && (
-                                <div className="text-center mt-3 p-2 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-500/50 rounded-lg text-red-700 dark:text-red-300 text-xs">
-                                    Entries are disabled for today (Sunday).
+                                <div className={`text-center mt-3 p-2 rounded-lg text-xs ${entryExists ? 'bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-500/50 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-500/50 text-red-700 dark:text-red-300'}`}>
+                                    {entryExists ? 'Today has been marked as a non-meal day.' : 'Entries are disabled for today (Sunday).'}
                                 </div>
                             )}
                         </div>

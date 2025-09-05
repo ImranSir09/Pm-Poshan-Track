@@ -4,10 +4,11 @@ import Button from '../ui/Button';
 import { useData } from '../../hooks/useData';
 import { useToast } from '../../hooks/useToast';
 import Modal from '../ui/Modal';
-import { AppData } from '../../types';
+import { AppData, Category } from '../../types';
 import PDFPreviewModal from '../ui/PDFPreviewModal';
 import { generatePDFReport } from '../../hooks/pdfGenerator';
 import { validateImportData } from '../../services/dataValidator';
+import { calculateMonthlySummary } from '../../services/summaryCalculator';
 
 const reportDescriptions: Record<string, string> = {
     mdcf: "Generates the official Monthly Data Collection Format (MDCF) required for reporting.",
@@ -34,6 +35,76 @@ const Reports: React.FC = () => {
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [pdfPreviewData, setPdfPreviewData] = useState<{ blobUrl: string; pdfBlob: Blob; filename: string } | null>(null);
     const [importConfirmation, setImportConfirmation] = useState<{ data: AppData; summary: Record<string, string | number> } | null>(null);
+
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [reportSummary, setReportSummary] = useState<Record<string, string | number> | null>(null);
+
+    const initiateReportGeneration = () => {
+        const summary = calculateMonthlySummary(data, selectedMonth);
+        const { totals, closingBalance, monthEntries } = summary;
+        
+        let newSummary: Record<string, string | number> = {};
+        
+        const monthDate = new Date(`${selectedMonth}-02T00:00:00`);
+        const monthName = monthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+        switch (reportType) {
+            case 'mdcf':
+                newSummary = {
+                    'Report': 'Monthly Data Collection Format (MDCF)',
+                    'For Month': monthName,
+                    'Total Meal Days': monthEntries.filter(e => e.totalPresent > 0).length,
+                    'Total Students Fed': totals.present,
+                    'Rice Consumed': `${totals.rice.toFixed(3)} kg`,
+                    'Cooking Cost': `₹${totals.expenditure.toFixed(2)}`,
+                    'Closing Rice': `${(closingBalance.rice.balvatika + closingBalance.rice.primary + closingBalance.rice.middle).toFixed(3)} kg`,
+                    'Closing Cash': `₹${(closingBalance.cash.balvatika + closingBalance.cash.primary + closingBalance.cash.middle).toFixed(2)}`,
+                };
+                break;
+            case 'daily_consumption':
+                 newSummary = {
+                    'Report': 'Daily Consumption Register',
+                    'For Month': monthName,
+                    'Total Meal Days': monthEntries.filter(e => e.totalPresent > 0).length,
+                    'Rice Consumed': `${totals.rice.toFixed(3)} kg`,
+                    'Total Expenditure': `₹${totals.expenditure.toFixed(2)}`,
+                };
+                break;
+            case 'roll_statement':
+                const totalEnrollment = data.settings.classRolls.reduce((sum, c) => sum + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0);
+                newSummary = {
+                    'Report': 'Roll Statement',
+                    'Total Enrollment': totalEnrollment,
+                };
+                break;
+            case 'rice_requirement':
+                 const workingDays = monthEntries.filter(e => e.totalPresent > 0).length;
+                 const enrollment = data.settings.classRolls.reduce((sum, c) => sum + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0);
+                 const totalRiceKg = data.settings.classRolls.reduce((total, c) => {
+                     let cat: Category | null = null;
+                     if (['bal', 'pp1', 'pp2'].includes(c.id)) cat = 'balvatika';
+                     else if (['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)) cat = 'primary';
+                     else if (['c6', 'c7', 'c8'].includes(c.id)) cat = 'middle';
+
+                     if (cat) {
+                         const classRoll = c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls;
+                         total += (classRoll * workingDays * data.settings.rates.rice[cat]) / 1000;
+                     }
+                     return total;
+                 }, 0);
+                newSummary = {
+                    'Report': 'Rice Requirement Certificate',
+                    'For Month': monthName,
+                    'Total Enrollment': enrollment,
+                    'Working Days': workingDays,
+                    'Total Rice Required': `${totalRiceKg.toFixed(3)} kg`,
+                };
+                break;
+        }
+
+        setReportSummary(newSummary);
+        setIsConfirmModalOpen(true);
+    };
 
     const handleReportExport = () => {
         setIsGenerating(true);
@@ -197,6 +268,32 @@ const Reports: React.FC = () => {
                     </div>
                 </div>
             </Modal>
+             <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)} title="Confirm Report Generation">
+                <div className="space-y-4">
+                    <p className="text-sm text-stone-600 dark:text-gray-300">
+                        Please review the summary below before generating the PDF. Does this look correct?
+                    </p>
+                    {reportSummary && (
+                        <div className="text-sm space-y-2 bg-amber-100/40 dark:bg-gray-800/50 p-3 rounded-lg">
+                            {Object.entries(reportSummary).map(([key, value]) => (
+                                <div key={key} className="flex justify-between items-center">
+                                    <strong className="text-stone-700 dark:text-gray-300 pr-2">{key}:</strong>
+                                    <span className="text-stone-900 dark:text-white text-right">{value}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <div className="flex justify-end space-x-2">
+                        <Button variant="secondary" onClick={() => setIsConfirmModalOpen(false)}>Cancel</Button>
+                        <Button onClick={() => {
+                            setIsConfirmModalOpen(false);
+                            handleReportExport();
+                        }}>
+                            Generate PDF
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         
             <div className="space-y-4">
                 <Card title="Export Reports">
@@ -228,7 +325,7 @@ const Reports: React.FC = () => {
                                 />
                             </div>
                         )}
-                        <Button onClick={handleReportExport} className="w-full" disabled={isGenerating}>
+                        <Button onClick={initiateReportGeneration} className="w-full" disabled={isGenerating}>
                             {isGenerating ? (
                                 <span className="flex items-center justify-center">
                                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

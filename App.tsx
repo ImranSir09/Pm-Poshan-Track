@@ -53,7 +53,14 @@ const AppContent: React.FC = () => {
 };
 
 const AuthenticatedApp: React.FC = () => {
-    const [currentPage, setCurrentPage] = useState<Page>('dashboard');
+    const [currentPage, setCurrentPage] = useState<Page>(() => {
+        const initialPage = sessionStorage.getItem('initialPage') as Page | null;
+        if (initialPage === 'settings') {
+            sessionStorage.removeItem('initialPage'); // Consume the one-time flag
+            return 'settings';
+        }
+        return 'dashboard'; // Default for all other sessions
+    });
 
     const renderPage = () => {
         switch (currentPage) {
