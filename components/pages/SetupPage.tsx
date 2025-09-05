@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
@@ -126,7 +127,11 @@ const SetupPage: React.FC = () => {
                                     placeholder="Enter the key provided by admin"
                                     className={errors.signupKey ? 'border-red-500 dark:border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
                                 />
-                                {errors.signupKey && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.signupKey}</p>}
+                                {errors.signupKey ? (
+                                    <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.signupKey}</p>
+                                ) : (
+                                    <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">This key is provided by the administrator to activate the app.</p>
+                                )}
                             </div>
                             <div>
                                 <Input
@@ -138,7 +143,11 @@ const SetupPage: React.FC = () => {
                                     required
                                     className={errors.username ? 'border-red-500 dark:border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
                                 />
-                                {errors.username && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.username}</p>}
+                                 {errors.username ? (
+                                    <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.username}</p>
+                                ) : (
+                                    <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">This name will be displayed on the dashboard and used in reports.</p>
+                                )}
                             </div>
                              <div>
                                 <Input
@@ -164,7 +173,11 @@ const SetupPage: React.FC = () => {
                                     required
                                     className={errors.password ? 'border-red-500 dark:border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
                                 />
-                                {errors.password && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.password}</p>}
+                                {errors.password ? (
+                                    <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.password}</p>
+                                ) : (
+                                    <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">Use a mix of letters, numbers, and symbols for better security.</p>
+                                )}
                             </div>
                             <div>
                                 <PasswordInput
@@ -203,7 +216,11 @@ const SetupPage: React.FC = () => {
                                             required
                                             className={errors.securityAnswer ? 'border-red-500 dark:border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
                                         />
-                                        {errors.securityAnswer && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.securityAnswer}</p>}
+                                        {errors.securityAnswer ? (
+                                            <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.securityAnswer}</p>
+                                        ) : (
+                                            <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">This is crucial for recovering your account if you forget your password.</p>
+                                        )}
                                     </div>
                                 </div>
                             </fieldset>

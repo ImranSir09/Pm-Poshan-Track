@@ -245,7 +245,11 @@ const SettingsPage: React.FC = () => {
                                             onInput={(e) => { if (e.currentTarget.value.length > 11) e.currentTarget.value = e.currentTarget.value.slice(0, 11); }}
                                             className={!isUdiseValid ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
                                         />
-                                        {!isUdiseValid && <p className="mt-1 text-xs text-red-500 dark:text-red-400">UDISE code must be 11 digits long.</p>}
+                                        {!isUdiseValid ? (
+                                            <p className="mt-1 text-xs text-red-500 dark:text-red-400">UDISE code must be 11 digits long.</p>
+                                        ) : (
+                                            <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">Unified District Information System for Education code.</p>
+                                        )}
                                     </div>
                                     
                                     <div>
@@ -325,7 +329,8 @@ const SettingsPage: React.FC = () => {
                             </div>
                             
                             <div>
-                                <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-2">MDM Incharge (App User)</h3>
+                                <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-1">MDM Incharge (App User)</h3>
+                                <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">Details of the person primarily using this application. This name appears on reports.</p>
                                 <div className="grid md:grid-cols-2 gap-3">
                                     <Input 
                                         label="Incharge's Name" 
@@ -347,7 +352,8 @@ const SettingsPage: React.FC = () => {
                             </div>
 
                             <div>
-                                <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-2">Head of the Institution</h3>
+                                <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-1">Head of the Institution</h3>
+                                <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">Official's name for signature blocks on all generated reports.</p>
                                 <div className="grid md:grid-cols-2 gap-3">
                                     <Input 
                                         label="Head's Name" 
@@ -489,7 +495,7 @@ const SettingsPage: React.FC = () => {
                             <div>
                                 <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-2">Initial Opening Balance</h3>
                                 <p className="text-xs text-stone-500 dark:text-gray-400 mb-3">
-                                    Set the starting balance for the very first month of use. This is used as the opening balance until the first monthly summary is saved.
+                                    Set this once during initial setup. It acts as the starting balance for your records. After the first month, balances will roll over automatically.
                                 </p>
                                 <div className="space-y-3">
                                     <fieldset className="border border-amber-300/50 dark:border-gray-600 rounded-lg p-3">
@@ -508,15 +514,18 @@ const SettingsPage: React.FC = () => {
                                             <Input label="Middle" id="ob-cash-mid" type="number" step="0.01" value={settings.initialOpeningBalance?.cash?.middle || 0} onChange={e => handleOpeningBalanceChange('cash', 'middle', e.target.value)} />
                                         </div>
                                     </fieldset>
-                                    <Input 
-                                        label="MME Expenditure for this month (₹)" 
-                                        id="mme-expenditure" 
-                                        type="number" 
-                                        step="0.01"
-                                        min="0"
-                                        value={settings.mmeExpenditure || 0}
-                                        onChange={e => setSettings(prev => ({ ...prev, mmeExpenditure: parseFloat(e.target.value) || 0 }))}
-                                    />
+                                    <div>
+                                        <Input 
+                                            label="MME Expenditure for this month (₹)" 
+                                            id="mme-expenditure" 
+                                            type="number" 
+                                            step="0.01"
+                                            min="0"
+                                            value={settings.mmeExpenditure || 0}
+                                            onChange={e => setSettings(prev => ({ ...prev, mmeExpenditure: parseFloat(e.target.value) || 0 }))}
+                                        />
+                                        <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">Management, Monitoring, and Evaluation expenditure. Required for the MDCF report.</p>
+                                    </div>
                                 </div>
                             </div>
                             <div>
@@ -524,7 +533,7 @@ const SettingsPage: React.FC = () => {
                                 <div className="flex items-center justify-between p-3 mb-3 bg-amber-100/50 dark:bg-gray-800/50 rounded-lg">
                                     <div>
                                         <label htmlFor="edit-rates" className="font-medium text-stone-700 dark:text-gray-300">Edit Food Rates</label>
-                                        <p className="text-xs text-stone-500 dark:text-gray-400">Enable to adjust per-student rates.</p>
+                                        <p className="text-xs text-stone-500 dark:text-gray-400">Enable to adjust per-student rates as per official guidelines.</p>
                                     </div>
                                     <label className="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="edit-rates" className="sr-only peer" checked={isRatesEditable} onChange={e => setIsRatesEditable(e.target.checked)} />
@@ -558,7 +567,8 @@ const SettingsPage: React.FC = () => {
                     <AccordionItem id="staff" title="Staff & Health Records">
                         <div className="space-y-4">
                             <div>
-                                <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-2">Cook-Cum-Helper Details</h3>
+                                <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-1">Cook-Cum-Helper Details</h3>
+                                <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">This information is used for the official MDCF report.</p>
                                 <div className="space-y-3">
                                     {settings.cooks.map((cook, index) => (
                                         <div key={cook.id} className="p-3 border border-amber-300/50 dark:border-gray-600 rounded-lg space-y-3">
@@ -604,7 +614,8 @@ const SettingsPage: React.FC = () => {
                             </div>
 
                             <div>
-                                <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-2">Health Status</h3>
+                                <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-1">Health Status</h3>
+                                <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">Data for the monthly MDCF report.</p>
                                 <div className="grid grid-cols-2 gap-3">
                                     <Input label="IFA Tablets (Boys)" id="ifa-boys" type="number" min="0" value={settings.healthStatus.ifaBoys} onChange={e => handleHealthChange('ifaBoys', e.target.value)} />
                                     <Input label="IFA Tablets (Girls)" id="ifa-girls" type="number" min="0" value={settings.healthStatus.ifaGirls} onChange={e => handleHealthChange('ifaGirls', e.target.value)} />
@@ -614,7 +625,8 @@ const SettingsPage: React.FC = () => {
                             </div>
 
                             <div>
-                                <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-2">Inspection Report</h3>
+                                <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-1">Inspection Report</h3>
+                                <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">Data for the monthly MDCF report.</p>
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between p-3 bg-amber-100/50 dark:bg-gray-800/50 rounded-lg">
                                         <div>

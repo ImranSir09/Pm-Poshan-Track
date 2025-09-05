@@ -83,6 +83,9 @@ const Receipts: React.FC = () => {
             <div className="space-y-4">
                 <Card title="Add New Receipt">
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        <p className="text-xs text-stone-500 dark:text-gray-400 -mt-2">
+                            Log all incoming rice and cash here. These receipts will be added to your stock and reflected in the monthly summary.
+                        </p>
                         <Input label="Date" id="receipt-date" type="date" value={date} onChange={e => setDate(e.target.value)} required max={todayString}/>
                         
                         <fieldset className="border border-amber-300/50 dark:border-gray-600 rounded-lg p-3">

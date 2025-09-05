@@ -9,6 +9,13 @@ import PDFPreviewModal from '../ui/PDFPreviewModal';
 import { generatePDFReport } from '../../hooks/pdfGenerator';
 import { validateImportData } from '../../services/dataValidator';
 
+const reportDescriptions: Record<string, string> = {
+    mdcf: "Generates the official Monthly Data Collection Format (MDCF) required for reporting.",
+    roll_statement: "Creates a summary of student enrollment numbers by class and social category.",
+    daily_consumption: "Produces a detailed, register-style log of daily meals, attendance, and expenditure for the selected month.",
+    rice_requirement: "Generates a formal certificate for the monthly rice requirement based on enrollment and working days."
+};
+
 const Reports: React.FC = () => {
     const { data, importData, resetData, updateLastBackupDate } = useData();
     const { showToast } = useToast();
@@ -207,6 +214,7 @@ const Reports: React.FC = () => {
                                 <option value="daily_consumption">Daily Consumption Register</option>
                                 <option value="rice_requirement">Rice Requirement Certificate</option>
                             </select>
+                            <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">{reportDescriptions[reportType]}</p>
                         </div>
                         {needsMonth && (
                             <div>
@@ -240,12 +248,16 @@ const Reports: React.FC = () => {
                     <div className="space-y-3">
                         <div>
                             <p className="text-sm font-medium mb-1">Export Data</p>
-                            <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">Save all your app data (settings, entries, receipts) to a JSON file on your device.</p>
+                            <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">
+                                Save all app data to a file. <strong>This is your only backup.</strong> Store it in a safe place (e.g., email, cloud drive) to prevent data loss.
+                            </p>
                             <Button onClick={handleExport} className="w-full">Export to JSON</Button>
                         </div>
                         <div>
                             <p className="text-sm font-medium mb-1">Import Data</p>
-                            <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">Load data from a previously exported JSON file. This will overwrite current data.</p>
+                            <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">
+                                Restore data from a backup file. <span className="font-bold text-yellow-600 dark:text-yellow-400">Warning: This will replace all existing data in the app.</span>
+                            </p>
                             <Button onClick={handleImportClick} variant="secondary" className="w-full">Select File to Import</Button>
                             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
                         </div>
@@ -253,7 +265,9 @@ const Reports: React.FC = () => {
                 </Card>
 
                 <Card title="Reset Application">
-                    <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">This will permanently delete all entries, receipts, and settings, resetting the app to its initial state. Use with caution.</p>
+                    <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">
+                        <span className="font-bold text-red-600 dark:text-red-400">This action is irreversible.</span> It will permanently delete all data. Ensure you have a backup if you wish to restore later.
+                    </p>
                     <Button onClick={() => setResetModalOpen(true)} variant="danger" className="w-full">Reset All Data</Button>
                 </Card>
 
