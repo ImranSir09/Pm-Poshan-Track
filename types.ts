@@ -105,6 +105,7 @@ export interface Settings {
     inspectionReport: InspectionReport;
     initialOpeningBalance: MonthlyBalanceData;
     mdmIncharge: MDMIncharge;
+    headOfInstitution: MDMIncharge;
     notificationSettings: NotificationSettings;
     mmeExpenditure: number; // New field for MDCF report
 }
@@ -158,6 +159,7 @@ export interface AuthData {
     password?: string;
     securityQuestion: string;
     securityAnswer: string;
+    contact?: string;
 }
 
 export interface AppData {

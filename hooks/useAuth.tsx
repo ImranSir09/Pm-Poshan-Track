@@ -14,7 +14,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { data, updateAuth } = useData();
+    const { data, updateAuth, setupAccountData } = useData();
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
@@ -39,7 +39,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const setupAccount = (authData: AuthData) => {
-        updateAuth(authData);
+        setupAccountData(authData);
         setIsAuthenticated(true);
         sessionStorage.setItem('pm-poshan-auth', 'true');
     };

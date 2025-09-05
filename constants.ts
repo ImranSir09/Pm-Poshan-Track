@@ -64,6 +64,10 @@ export const DEFAULT_SETTINGS: Settings = {
         name: '',
         contact: '',
     },
+    headOfInstitution: {
+        name: '',
+        contact: '',
+    },
     notificationSettings: {
         enabled: true,
         lowRiceThreshold: 10, // in kg

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../ui/Card';
 import { useData } from '../../hooks/useData';
@@ -89,7 +88,7 @@ const CategoryAbstractTable: React.FC<{ title: string; data: AbstractData; unit:
                             <td className={tdClasses}>{data.opening.toFixed(decimals)}</td>
                             <td className={tdClasses}>{data.received.toFixed(decimals)}</td>
                             <td className={tdClasses}>{data.total.toFixed(decimals)}</td>
-                            <td className={tdClasses}>{data[key]?.toFixed(decimals)}</td>
+                            <td className={tdClasses}>{(data[key] || 0).toFixed(decimals)}</td>
                             <td className={`${tdClasses} font-bold text-amber-700 dark:text-amber-400`}>{data.balance.toFixed(decimals)}</td>
                         </tr>
                     </tbody>
@@ -97,11 +96,6 @@ const CategoryAbstractTable: React.FC<{ title: string; data: AbstractData; unit:
             </div>
         </div>
     );
-};
-
-
-const getLocalYYYYMMDD = (date: Date): string => {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
 
 const MonthlySummary: React.FC = () => {
@@ -127,7 +121,69 @@ const MonthlySummary: React.FC = () => {
         setSelectedMonth(e.target.value);
     };
 
-    const mealDays = monthEntries.filter(e => e.totalPresent > 0).length;
+    const displayedTotals = useMemo(() => {
+        if (view === 'overall') {
+            return {
+                mealDays: monthEntries.filter(e => e.totalPresent > 0).length,
+                present: totals.present,
+                expenditure: totals.expenditure,
+                rice: totals.rice,
+            };
+        }
+        // When a specific category is selected
+        return {
+            mealDays: monthEntries.filter(e => e.present[view] > 0).length,
+            present: categoryTotals.present[view] || 0,
+            expenditure: categoryTotals.expenditure[view] || 0,
+            rice: categoryTotals.rice[view] || 0,
+        };
+    }, [view, monthEntries, totals, categoryTotals]);
+
+    const displayedEntries = useMemo(() => {
+        const { rates } = data.settings;
+
+        if (view === 'overall') {
+            return monthEntries.map(entry => ({
+                id: entry.id,
+                date: entry.date,
+                present: entry.totalPresent,
+                rice: entry.consumption.rice,
+                cost: entry.consumption.total,
+                reasonForNoMeal: entry.reasonForNoMeal
+            }));
+        }
+        
+        // Handle category-specific views
+        return monthEntries
+            .map(entry => {
+                const presentCount = entry.present[view] || 0;
+                
+                // If this category had no students, we don't display a row for this day
+                if (presentCount === 0) {
+                    return null; 
+                }
+
+                const riceConsumption = (presentCount * (rates.rice[view] || 0)) / 1000;
+                const cost = presentCount * (
+                    (rates.dalVeg[view] || 0) +
+                    (rates.oilCond[view] || 0) +
+                    (rates.salt[view] || 0) +
+                    (rates.fuel[view] || 0)
+                );
+                
+                return {
+                    id: entry.id,
+                    date: entry.date,
+                    present: presentCount,
+                    rice: riceConsumption,
+                    cost: cost,
+                    reasonForNoMeal: undefined // Not a "no meal" day for this specific category
+                };
+            })
+            .filter((entry): entry is NonNullable<typeof entry> => entry !== null); // Remove nulls
+            
+    }, [monthEntries, view, data.settings.rates]);
+
 
     return (
         <div className="space-y-4">
@@ -186,19 +242,19 @@ const MonthlySummary: React.FC = () => {
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                             <div>
                                 <p className="text-xs text-stone-500 dark:text-gray-400">Meal Days</p>
-                                <p className="text-lg font-bold text-amber-700 dark:text-amber-400">{mealDays}</p>
+                                <p className="text-lg font-bold text-amber-700 dark:text-amber-400">{displayedTotals.mealDays}</p>
                             </div>
                             <div>
                                 <p className="text-xs text-stone-500 dark:text-gray-400">Total Students Fed</p>
-                                <p className="text-lg font-bold text-amber-700 dark:text-amber-400">{totals.present}</p>
+                                <p className="text-lg font-bold text-amber-700 dark:text-amber-400">{displayedTotals.present}</p>
                             </div>
                             <div>
                                 <p className="text-xs text-stone-500 dark:text-gray-400">Total Expenditure</p>
-                                <p className="text-lg font-bold text-amber-700 dark:text-amber-400">₹{totals.expenditure.toFixed(2)}</p>
+                                <p className="text-lg font-bold text-amber-700 dark:text-amber-400">₹{displayedTotals.expenditure.toFixed(2)}</p>
                             </div>
                             <div>
                                 <p className="text-xs text-stone-500 dark:text-gray-400">Total Rice Used</p>
-                                <p className="text-lg font-bold text-amber-700 dark:text-amber-400">{totals.rice.toFixed(3)} kg</p>
+                                <p className="text-lg font-bold text-amber-700 dark:text-amber-400">{displayedTotals.rice.toFixed(3)} kg</p>
                             </div>
                         </div>
                     </Card>
@@ -215,26 +271,34 @@ const MonthlySummary: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {[...monthEntries].reverse().map(entry => {
-                                        const date = new Date(entry.date + 'T00:00:00');
-                                        const isNoMealDay = entry.totalPresent === 0;
-                                        return (
-                                            <tr key={entry.id} className={`border-b border-amber-200/50 dark:border-gray-700 ${isNoMealDay ? 'bg-red-100/30 dark:bg-red-900/20' : ''}`}>
-                                                <td className="p-2">{date.toLocaleDateString('en-IN')}</td>
-                                                {isNoMealDay ? (
-                                                    <td colSpan={3} className="p-2 text-center text-red-700 dark:text-red-300 text-xs italic">
-                                                        {entry.reasonForNoMeal || 'No Meal Served'}
-                                                    </td>
-                                                ) : (
-                                                    <>
-                                                        <td className="p-2 text-right">{entry.totalPresent}</td>
-                                                        <td className="p-2 text-right">{entry.consumption.rice.toFixed(3)}</td>
-                                                        <td className="p-2 text-right">{entry.consumption.total.toFixed(2)}</td>
-                                                    </>
-                                                )}
-                                            </tr>
-                                        )
-                                    })}
+                                    {displayedEntries.length > 0 ? (
+                                        [...displayedEntries].reverse().map(entry => {
+                                            const date = new Date(entry.date + 'T00:00:00');
+                                            const isNoMealDay = entry.present === 0; // Only true in 'overall' view
+                                            return (
+                                                <tr key={entry.id} className={`border-b border-amber-200/50 dark:border-gray-700 ${isNoMealDay ? 'bg-red-100/30 dark:bg-red-900/20' : ''}`}>
+                                                    <td className="p-2">{date.toLocaleDateString('en-IN')}</td>
+                                                    {isNoMealDay ? (
+                                                        <td colSpan={3} className="p-2 text-center text-red-700 dark:text-red-300 text-xs italic">
+                                                            {entry.reasonForNoMeal || 'No Meal Served'}
+                                                        </td>
+                                                    ) : (
+                                                        <>
+                                                            <td className="p-2 text-right">{entry.present}</td>
+                                                            <td className="p-2 text-right">{entry.rice.toFixed(3)}</td>
+                                                            <td className="p-2 text-right">{entry.cost.toFixed(2)}</td>
+                                                        </>
+                                                    )}
+                                                </tr>
+                                            )
+                                        })
+                                    ) : (
+                                        <tr className="border-b border-amber-200/50 dark:border-gray-700">
+                                            <td colSpan={4} className="p-4 text-center text-stone-500 dark:text-gray-400">
+                                                No entries with meals served for this category in the selected month.
+                                            </td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>

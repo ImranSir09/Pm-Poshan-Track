@@ -95,6 +95,16 @@ const SettingsPage: React.FC = () => {
             }
         }));
     };
+
+    const handleHeadChange = (field: keyof MDMIncharge, value: string) => {
+        setSettings(prev => ({
+            ...prev,
+            headOfInstitution: {
+                ...(prev.headOfInstitution || { name: '', contact: '' }),
+                [field]: value
+            }
+        }));
+    };
     
     const handleClassRollChange = (classId: string, category: 'general' | 'stsc', gender: 'boys' | 'girls', value: string) => {
         const numValue = parseInt(value) || 0;
@@ -219,7 +229,7 @@ const SettingsPage: React.FC = () => {
         <div className="pb-32">
             <div className="space-y-4">
                 <Accordion defaultOpenId="general">
-                    <AccordionItem id="general" title="General & MDM Details">
+                    <AccordionItem id="general" title="General & School Details">
                         <div className="space-y-4">
                             <div>
                                 <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-2">School Information</h3>
@@ -313,12 +323,12 @@ const SettingsPage: React.FC = () => {
                                     <Input label="Village/Ward" id="village" value={settings.schoolDetails.village} onChange={e => handleSchoolDetailsChange('village', e.target.value)} required />
                                 </div>
                             </div>
-
+                            
                             <div>
-                                <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-2">MDM Incharge</h3>
+                                <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-2">MDM Incharge (App User)</h3>
                                 <div className="grid md:grid-cols-2 gap-3">
                                     <Input 
-                                        label="Incharge Name" 
+                                        label="Incharge's Name" 
                                         id="incharge-name" 
                                         value={settings.mdmIncharge?.name || ''} 
                                         onChange={e => handleInchargeChange('name', e.target.value)} 
@@ -331,6 +341,28 @@ const SettingsPage: React.FC = () => {
                                         maxLength={10}
                                         value={settings.mdmIncharge?.contact || ''} 
                                         onChange={e => handleInchargeChange('contact', e.target.value)}
+                                        onInput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-2">Head of the Institution</h3>
+                                <div className="grid md:grid-cols-2 gap-3">
+                                    <Input 
+                                        label="Head's Name" 
+                                        id="head-name" 
+                                        value={settings.headOfInstitution?.name || ''} 
+                                        onChange={e => handleHeadChange('name', e.target.value)} 
+                                        required
+                                    />
+                                    <Input 
+                                        label="Contact Number" 
+                                        id="head-contact" 
+                                        type="tel" 
+                                        maxLength={10}
+                                        value={settings.headOfInstitution?.contact || ''} 
+                                        onChange={e => handleHeadChange('contact', e.target.value)}
                                         onInput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); }}
                                     />
                                 </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
@@ -20,6 +21,7 @@ const SetupPage: React.FC = () => {
     const { showToast } = useToast();
     const [signupKey, setSignupKey] = useState('');
     const [username, setUsername] = useState('');
+    const [contact, setContact] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [securityQuestion, setSecurityQuestion] = useState(SECURITY_QUESTIONS[0]);
@@ -30,6 +32,7 @@ const SetupPage: React.FC = () => {
     const [errors, setErrors] = useState({
         signupKey: '',
         username: '',
+        contact: '',
         password: '',
         confirmPassword: '',
         securityAnswer: '',
@@ -46,6 +49,10 @@ const SetupPage: React.FC = () => {
                 return '';
             },
             username: () => !username ? 'Username is required.' : '',
+            contact: () => {
+                if (contact && !/^\d{10}$/.test(contact)) return 'Contact number must be 10 digits.';
+                return '';
+            },
             password: () => {
                 if (!password) return 'Password is required.';
                 if (password.length < 6) return 'Password must be at least 6 characters long.';
@@ -75,7 +82,7 @@ const SetupPage: React.FC = () => {
         
         setErrors(newErrors);
         return Object.values(newErrors).every(error => error === '');
-    }, [signupKey, username, password, confirmPassword, securityAnswer, agreedToTerms, errors]);
+    }, [signupKey, username, contact, password, confirmPassword, securityAnswer, agreedToTerms, errors]);
 
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -83,6 +90,7 @@ const SetupPage: React.FC = () => {
         if (validate()) {
             setupAccount({
                 username,
+                contact,
                 password,
                 securityQuestion,
                 securityAnswer,
@@ -131,6 +139,20 @@ const SetupPage: React.FC = () => {
                                     className={errors.username ? 'border-red-500 dark:border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
                                 />
                                 {errors.username && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.username}</p>}
+                            </div>
+                             <div>
+                                <Input
+                                    label="Contact Number"
+                                    id="contact"
+                                    type="tel"
+                                    maxLength={10}
+                                    value={contact}
+                                    onChange={e => setContact(e.target.value)}
+                                    onInput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); }}
+                                    onBlur={() => validate('contact')}
+                                    className={errors.contact ? 'border-red-500 dark:border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
+                                />
+                                {errors.contact && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.contact}</p>}
                             </div>
                             <div>
                                 <PasswordInput

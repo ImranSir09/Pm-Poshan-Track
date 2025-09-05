@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { AppData, DailyEntry, Receipt, Settings, MonthlyBalanceData, MonthlyBalance, InspectionAuthority, AuthData } from '../types';
 import { DEFAULT_SETTINGS } from '../constants';
@@ -108,6 +109,7 @@ interface DataContextType {
     resetData: () => void;
     updateLastBackupDate: () => void;
     updateAuth: (authData: AuthData) => void;
+    setupAccountData: (authData: AuthData) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -183,6 +185,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setData(prevData => ({ ...prevData, auth: authData }));
     }, []);
 
+    const setupAccountData = useCallback((authData: AuthData) => {
+        setData(prevData => {
+            const newSettings = {
+                ...prevData.settings,
+                mdmIncharge: {
+                    name: authData.username,
+                    contact: authData.contact || '',
+                }
+            };
+            // Remove contact from auth data before saving to avoid duplication
+            const { contact, ...restAuthData } = authData;
+            return { ...prevData, settings: newSettings, auth: restAuthData };
+        });
+    }, []);
+
     const saveMonthlyBalance = useCallback((monthKey: string, balance: MonthlyBalanceData) => {
         setData(prevData => ({
             ...prevData,
@@ -234,7 +251,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     return (
-        <DataContext.Provider value={{ data, setData, addEntry, deleteEntry, addReceipt, deleteReceipt, updateSettings, saveMonthlyBalance, importData, resetData, updateLastBackupDate, updateAuth }}>
+        <DataContext.Provider value={{ data, setData, addEntry, deleteEntry, addReceipt, deleteReceipt, updateSettings, saveMonthlyBalance, importData, resetData, updateLastBackupDate, updateAuth, setupAccountData }}>
             {children}
         </DataContext.Provider>
     );
