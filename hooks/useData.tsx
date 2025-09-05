@@ -79,6 +79,11 @@ const getInitialData = (): AppData => {
                 });
                 parsedData.monthlyBalances = migratedBalances;
             }
+            
+            // Migration for welcome screen: if user exists but flag is missing, assume they don've need to see it.
+            if (parsedData.auth?.password && typeof parsedData.welcomeScreenShown === 'undefined') {
+                parsedData.welcomeScreenShown = true;
+            }
 
             return parsedData;
         }
@@ -110,6 +115,7 @@ interface DataContextType {
     updateLastBackupDate: () => void;
     updateAuth: (authData: AuthData) => void;
     setupAccountData: (authData: AuthData) => void;
+    markWelcomeAsShown: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -196,8 +202,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             };
             // Remove contact from auth data before saving to avoid duplication
             const { contact, ...restAuthData } = authData;
-            return { ...prevData, settings: newSettings, auth: restAuthData };
+            return { 
+                ...prevData, 
+                settings: newSettings, 
+                auth: restAuthData,
+                welcomeScreenShown: false
+            };
         });
+    }, []);
+    
+    const markWelcomeAsShown = useCallback(() => {
+        setData(prevData => ({ ...prevData, welcomeScreenShown: true }));
     }, []);
 
     const saveMonthlyBalance = useCallback((monthKey: string, balance: MonthlyBalanceData) => {
@@ -251,7 +266,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     return (
-        <DataContext.Provider value={{ data, setData, addEntry, deleteEntry, addReceipt, deleteReceipt, updateSettings, saveMonthlyBalance, importData, resetData, updateLastBackupDate, updateAuth, setupAccountData }}>
+        <DataContext.Provider value={{ data, setData, addEntry, deleteEntry, addReceipt, deleteReceipt, updateSettings, saveMonthlyBalance, importData, resetData, updateLastBackupDate, updateAuth, setupAccountData, markWelcomeAsShown }}>
             {children}
         </DataContext.Provider>
     );

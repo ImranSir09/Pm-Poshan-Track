@@ -24,7 +24,7 @@ const AbstractTable: React.FC<{ title: string; data: Record<Category, AbstractDa
         <div>
             <h3 className="font-bold text-amber-700 dark:text-amber-400 mb-2">{title} ({unit})</h3>
             <div className="overflow-x-auto rounded-lg border border-amber-300/50 dark:border-gray-600">
-                <table className="w-full text-xs text-left border-collapse">
+                <table className="min-w-[540px] w-full text-xs text-left border-collapse">
                     <thead className="bg-amber-100/60 dark:bg-gray-800/50">
                         <tr>
                             <th className={thClasses}>Category</th>
@@ -193,7 +193,7 @@ const DetailedConsumptionTable: React.FC<{
     
     return (
         <div className="overflow-x-auto rounded-lg border border-amber-300/50 dark:border-gray-600">
-            <table className="w-full text-xs text-left border-collapse">
+            <table className="min-w-[768px] w-full text-xs text-left border-collapse">
                 <thead className="bg-amber-100/60 dark:bg-gray-800/50 sticky top-0">
                     <tr>
                         <th className={thClasses}>S.No</th>

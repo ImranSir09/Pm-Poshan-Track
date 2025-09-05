@@ -14,6 +14,7 @@ import Navigation from './components/layout/Navigation';
 import ToastContainer from './components/ui/ToastContainer';
 import LoginPage from './components/pages/LoginPage';
 import SetupPage from './components/pages/SetupPage';
+import WelcomePage from './components/pages/WelcomePage';
 
 export type Page = 'dashboard' | 'summary' | 'receipts' | 'settings' | 'reports';
 
@@ -41,6 +42,11 @@ const AppContent: React.FC = () => {
 
     if (!isAuthenticated) {
         return <LoginPage />;
+    }
+    
+    // If authenticated, but the welcome screen hasn't been shown, show it.
+    if (data.welcomeScreenShown === false) {
+        return <WelcomePage />;
     }
     
     return <AuthenticatedApp />;

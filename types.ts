@@ -169,4 +169,5 @@ export interface AppData {
     receipts: Receipt[];
     monthlyBalances: MonthlyBalance;
     lastBackupDate?: string; // ISO string
+    welcomeScreenShown?: boolean;
 }
