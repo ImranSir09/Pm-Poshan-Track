@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../ui/Card';
 import { useData } from '../../hooks/useData';
-import { Category, AbstractData } from '../../types';
+import { Category, AbstractData, DailyEntry, Rates } from '../../types';
 import { calculateMonthlySummary } from '../../services/summaryCalculator';
 
 const AbstractTable: React.FC<{ title: string; data: Record<Category, AbstractData>; unit: string; decimals: number; }> = ({ title, data, unit, decimals }) => {
@@ -98,10 +98,170 @@ const CategoryAbstractTable: React.FC<{ title: string; data: AbstractData; unit:
     );
 };
 
+
+const SimpleDailyEntriesTable: React.FC<{ entries: any[] }> = ({ entries }) => (
+    <div className="overflow-x-auto max-h-72">
+        <table className="w-full text-xs text-left">
+            <thead className="bg-amber-100/60 dark:bg-gray-800/50 sticky top-0">
+                <tr>
+                    <th className="p-2">Date</th>
+                    <th className="p-2 text-right">Present</th>
+                    <th className="p-2 text-right">Rice (kg)</th>
+                    <th className="p-2 text-right">Cost (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {entries.length > 0 ? (
+                    [...entries].reverse().map(entry => {
+                        const date = new Date(entry.date + 'T00:00:00');
+                        const isNoMealDay = entry.present === 0;
+                        return (
+                            <tr key={entry.id} className={`border-b border-amber-200/50 dark:border-gray-700 ${isNoMealDay ? 'bg-red-100/30 dark:bg-red-900/20' : ''}`}>
+                                <td className="p-2">{date.toLocaleDateString('en-IN')}</td>
+                                {isNoMealDay ? (
+                                    <td colSpan={3} className="p-2 text-center text-red-700 dark:text-red-300 text-xs italic">
+                                        {entry.reasonForNoMeal || 'No Meal Served'}
+                                    </td>
+                                ) : (
+                                    <>
+                                        <td className="p-2 text-right">{entry.present}</td>
+                                        <td className="p-2 text-right">{entry.rice.toFixed(3)}</td>
+                                        <td className="p-2 text-right">{entry.cost.toFixed(2)}</td>
+                                    </>
+                                )}
+                            </tr>
+                        )
+                    })
+                ) : (
+                    <tr className="border-b border-amber-200/50 dark:border-gray-700">
+                        <td colSpan={4} className="p-4 text-center text-stone-500 dark:text-gray-400">
+                            No entries with meals served for this category in the selected month.
+                        </td>
+                    </tr>
+                )}
+            </tbody>
+        </table>
+    </div>
+);
+
+const DetailedConsumptionTable: React.FC<{
+    entries: DailyEntry[];
+    category: Category;
+    rates: Rates;
+    onRoll: number;
+}> = ({ entries, category, rates, onRoll }) => {
+    
+    const dailyData = entries.map((entry, index) => {
+        const present = entry.present[category];
+        const mealServed = present > 0;
+        
+        const riceUsed = mealServed ? (present * rates.rice[category]) / 1000 : 0;
+        const dalVeg = mealServed ? present * rates.dalVeg[category] : 0;
+        const oilCond = mealServed ? present * rates.oilCond[category] : 0;
+        const salt = mealServed ? present * rates.salt[category] : 0;
+        const fuel = mealServed ? present * rates.fuel[category] : 0;
+        const totalCost = mealServed ? dalVeg + oilCond + salt + fuel : 0;
+        
+        return {
+            sNo: index + 1,
+            date: entry.date,
+            present: present,
+            riceUsed,
+            dalVeg,
+            oilCond,
+            salt,
+            fuel,
+            totalCost,
+            reason: entry.reasonForNoMeal,
+            isSunday: new Date(entry.date + 'T00:00:00').getDay() === 0,
+        };
+    });
+    
+    const totals = dailyData.reduce((acc, day) => {
+        acc.present += day.present;
+        acc.riceUsed += day.riceUsed;
+        acc.dalVeg += day.dalVeg;
+        acc.oilCond += day.oilCond;
+        acc.salt += day.salt;
+        acc.fuel += day.fuel;
+        acc.totalCost += day.totalCost;
+        return acc;
+    }, { present: 0, riceUsed: 0, dalVeg: 0, oilCond: 0, salt: 0, fuel: 0, totalCost: 0 });
+
+    const thClasses = "p-2 whitespace-nowrap";
+    const tdClasses = "p-2 whitespace-nowrap";
+    
+    return (
+        <div className="overflow-x-auto rounded-lg border border-amber-300/50 dark:border-gray-600">
+            <table className="w-full text-xs text-left border-collapse">
+                <thead className="bg-amber-100/60 dark:bg-gray-800/50 sticky top-0">
+                    <tr>
+                        <th className={thClasses}>S.No</th>
+                        <th className={thClasses}>Date</th>
+                        <th className={`${thClasses} text-right`}>Roll</th>
+                        <th className={`${thClasses} text-right`}>Present</th>
+                        <th className={`${thClasses} text-right`}>Rice (kg)</th>
+                        <th className={`${thClasses} text-right`}>Dal/Veg (₹)</th>
+                        <th className={`${thClasses} text-right`}>Oil/Cond (₹)</th>
+                        <th className={`${thClasses} text-right`}>Salt (₹)</th>
+                        <th className={`${thClasses} text-right`}>Fuel (₹)</th>
+                        <th className={`${thClasses} text-right`}>Total (₹)</th>
+                        <th className={thClasses}>Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {dailyData.map(day => {
+                        const isNoMealDay = day.present === 0 || day.isSunday;
+                        const reasonText = day.isSunday ? 'Sunday' : (day.reason || 'No Meal Served');
+
+                        return (
+                            <tr key={day.date} className={`border-b border-amber-200/50 dark:border-gray-700 ${isNoMealDay ? 'bg-red-100/30 dark:bg-red-900/20' : ''}`}>
+                                {isNoMealDay ? (
+                                     <td colSpan={11} className={`${tdClasses} text-center italic text-red-700 dark:text-red-300`}>
+                                        {new Date(day.date + 'T00:00:00').toLocaleDateString('en-IN')} - {reasonText}
+                                    </td>
+                                ) : (
+                                    <>
+                                        <td className={tdClasses}>{day.sNo}</td>
+                                        <td className={tdClasses}>{new Date(day.date + 'T00:00:00').toLocaleDateString('en-IN')}</td>
+                                        <td className={`${tdClasses} text-right`}>{onRoll}</td>
+                                        <td className={`${tdClasses} text-right`}>{day.present}</td>
+                                        <td className={`${tdClasses} text-right`}>{day.riceUsed.toFixed(3)}</td>
+                                        <td className={`${tdClasses} text-right`}>{day.dalVeg.toFixed(2)}</td>
+                                        <td className={`${tdClasses} text-right`}>{day.oilCond.toFixed(2)}</td>
+                                        <td className={`${tdClasses} text-right`}>{day.salt.toFixed(2)}</td>
+                                        <td className={`${tdClasses} text-right`}>{day.fuel.toFixed(2)}</td>
+                                        <td className={`${tdClasses} text-right font-semibold`}>{day.totalCost.toFixed(2)}</td>
+                                        <td className={tdClasses}>-</td>
+                                    </>
+                                )}
+                            </tr>
+                        );
+                    })}
+                </tbody>
+                 <tfoot className="font-bold bg-amber-200/50 dark:bg-gray-800">
+                    <tr>
+                        <td colSpan={3} className={`${tdClasses} text-right`}>Total</td>
+                        <td className={`${tdClasses} text-right`}>{totals.present}</td>
+                        <td className={`${tdClasses} text-right`}>{totals.riceUsed.toFixed(3)}</td>
+                        <td className={`${tdClasses} text-right`}>{totals.dalVeg.toFixed(2)}</td>
+                        <td className={`${tdClasses} text-right`}>{totals.oilCond.toFixed(2)}</td>
+                        <td className={`${tdClasses} text-right`}>{totals.salt.toFixed(2)}</td>
+                        <td className={`${tdClasses} text-right`}>{totals.fuel.toFixed(2)}</td>
+                        <td className={`${tdClasses} text-right`}>{totals.totalCost.toFixed(2)}</td>
+                        <td className={tdClasses}>-</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    );
+};
+
 const MonthlySummary: React.FC = () => {
     const { data, saveMonthlyBalance } = useData();
     const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
     const [view, setView] = useState<'overall' | Category>('overall');
+    const { settings } = data;
 
     const summaryData = useMemo(
         () => calculateMonthlySummary(data, selectedMonth),
@@ -109,6 +269,23 @@ const MonthlySummary: React.FC = () => {
     );
     
     const { monthEntries, riceAbstracts, cashAbstracts, totals, categoryTotals, closingBalance } = summaryData;
+    
+    const onRoll = useMemo(() => {
+        const totals = { balvatika: 0, primary: 0, middle: 0 };
+        if (!settings.classRolls) return totals;
+
+        settings.classRolls.forEach(c => {
+            const classTotal = c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls;
+            if (['bal', 'pp1', 'pp2'].includes(c.id)) {
+                totals.balvatika += classTotal;
+            } else if (['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)) {
+                totals.primary += classTotal;
+            } else if (['c6', 'c7', 'c8'].includes(c.id)) {
+                totals.middle += classTotal;
+            }
+        });
+        return totals;
+    }, [settings.classRolls]);
 
     useEffect(() => {
         if (closingBalance && monthEntries.length > 0) {
@@ -130,7 +307,6 @@ const MonthlySummary: React.FC = () => {
                 rice: totals.rice,
             };
         }
-        // When a specific category is selected
         return {
             mealDays: monthEntries.filter(e => e.present[view] > 0).length,
             present: categoryTotals.present[view] || 0,
@@ -139,51 +315,17 @@ const MonthlySummary: React.FC = () => {
         };
     }, [view, monthEntries, totals, categoryTotals]);
 
-    const displayedEntries = useMemo(() => {
-        const { rates } = data.settings;
-
-        if (view === 'overall') {
-            return monthEntries.map(entry => ({
-                id: entry.id,
-                date: entry.date,
-                present: entry.totalPresent,
-                rice: entry.consumption.rice,
-                cost: entry.consumption.total,
-                reasonForNoMeal: entry.reasonForNoMeal
-            }));
-        }
-        
-        // Handle category-specific views
-        return monthEntries
-            .map(entry => {
-                const presentCount = entry.present[view] || 0;
-                
-                // If this category had no students, we don't display a row for this day
-                if (presentCount === 0) {
-                    return null; 
-                }
-
-                const riceConsumption = (presentCount * (rates.rice[view] || 0)) / 1000;
-                const cost = presentCount * (
-                    (rates.dalVeg[view] || 0) +
-                    (rates.oilCond[view] || 0) +
-                    (rates.salt[view] || 0) +
-                    (rates.fuel[view] || 0)
-                );
-                
-                return {
-                    id: entry.id,
-                    date: entry.date,
-                    present: presentCount,
-                    rice: riceConsumption,
-                    cost: cost,
-                    reasonForNoMeal: undefined // Not a "no meal" day for this specific category
-                };
-            })
-            .filter((entry): entry is NonNullable<typeof entry> => entry !== null); // Remove nulls
-            
-    }, [monthEntries, view, data.settings.rates]);
-
+    const simpleDisplayedEntries = useMemo(() => {
+        if (view !== 'overall') return []; // Only needed for overall view
+        return monthEntries.map(entry => ({
+            id: entry.id,
+            date: entry.date,
+            present: entry.totalPresent,
+            rice: entry.consumption.rice,
+            cost: entry.consumption.total,
+            reasonForNoMeal: entry.reasonForNoMeal
+        }));
+    }, [monthEntries, view]);
 
     return (
         <div className="space-y-4">
@@ -259,49 +401,17 @@ const MonthlySummary: React.FC = () => {
                         </div>
                     </Card>
 
-                    <Card title="Daily Entries for the Month">
-                         <div className="overflow-x-auto max-h-72">
-                            <table className="w-full text-xs text-left">
-                                <thead className="bg-amber-100/60 dark:bg-gray-800/50 sticky top-0">
-                                    <tr>
-                                        <th className="p-2">Date</th>
-                                        <th className="p-2 text-right">Present</th>
-                                        <th className="p-2 text-right">Rice (kg)</th>
-                                        <th className="p-2 text-right">Cost (₹)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {displayedEntries.length > 0 ? (
-                                        [...displayedEntries].reverse().map(entry => {
-                                            const date = new Date(entry.date + 'T00:00:00');
-                                            const isNoMealDay = entry.present === 0; // Only true in 'overall' view
-                                            return (
-                                                <tr key={entry.id} className={`border-b border-amber-200/50 dark:border-gray-700 ${isNoMealDay ? 'bg-red-100/30 dark:bg-red-900/20' : ''}`}>
-                                                    <td className="p-2">{date.toLocaleDateString('en-IN')}</td>
-                                                    {isNoMealDay ? (
-                                                        <td colSpan={3} className="p-2 text-center text-red-700 dark:text-red-300 text-xs italic">
-                                                            {entry.reasonForNoMeal || 'No Meal Served'}
-                                                        </td>
-                                                    ) : (
-                                                        <>
-                                                            <td className="p-2 text-right">{entry.present}</td>
-                                                            <td className="p-2 text-right">{entry.rice.toFixed(3)}</td>
-                                                            <td className="p-2 text-right">{entry.cost.toFixed(2)}</td>
-                                                        </>
-                                                    )}
-                                                </tr>
-                                            )
-                                        })
-                                    ) : (
-                                        <tr className="border-b border-amber-200/50 dark:border-gray-700">
-                                            <td colSpan={4} className="p-4 text-center text-stone-500 dark:text-gray-400">
-                                                No entries with meals served for this category in the selected month.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                    <Card title={view === 'overall' ? "Daily Entries for the Month" : "Daily Consumption Register"}>
+                        {view === 'overall' ? (
+                           <SimpleDailyEntriesTable entries={simpleDisplayedEntries} />
+                        ) : (
+                            <DetailedConsumptionTable
+                                entries={monthEntries}
+                                category={view}
+                                rates={settings.rates}
+                                onRoll={onRoll[view]}
+                            />
+                        )}
                     </Card>
                 </>
             )}

@@ -1,4 +1,3 @@
-
 import { AppData, Category, ClassRoll } from '../types';
 import { calculateMonthlySummary } from '../services/summaryCalculator';
 import { CLASS_STRUCTURE } from '../constants';
@@ -11,6 +10,39 @@ interface jsPDF {
 
 // These are loaded from index.html
 declare const jspdf: any;
+
+// A reusable function to add signature blocks to the bottom of a page
+const addSignatureBlock = (doc: jsPDF, settings: AppData['settings'], startY: number) => {
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const leftPos = pageWidth / 4;
+    const rightPos = pageWidth * 3 / 4;
+    const signatureSpacing = 15;
+
+    let y = startY + signatureSpacing;
+
+    // Check if there's enough space, if not, add a new page
+    if (y > pageHeight - 40) {
+        doc.addPage();
+        y = 20; // Reset y to top of new page
+    }
+
+    doc.setFontSize(9).setFont(undefined, 'normal');
+
+    // MDM Incharge Signature (Left)
+    doc.text('.........................................', leftPos, y, { align: 'center' });
+    doc.text(`(${settings.mdmIncharge.name || 'Name'})`, leftPos, y + 4, { align: 'center' });
+    doc.setFont(undefined, 'bold');
+    doc.text('MDM Incharge', leftPos, y + 8, { align: 'center' });
+
+    // Head of Institution Signature (Right)
+    doc.setFont(undefined, 'normal');
+    doc.text('.........................................', rightPos, y, { align: 'center' });
+    doc.text(`(${settings.headOfInstitution.name || 'Name'})`, rightPos, y + 4, { align: 'center' });
+    doc.setFont(undefined, 'bold');
+    doc.text('Head of the Institution', rightPos, y + 8, { align: 'center' });
+};
+
 
 // Helper to draw a checkbox for MDCF report
 const drawCheckbox = (doc: jsPDF, x: number, y: number, text: string, checked: boolean) => {
@@ -187,13 +219,7 @@ const generateMDCF = (data: AppData, selectedMonth: string): Blob => {
     });
 
     // ======== Signatures ========
-    const finalY = doc.lastAutoTable.finalY;
-    doc.setFontSize(9).setFont(undefined, 'normal');
-    doc.text('.........................................', 120, finalY + 20);
-    doc.text(`(${settings.headOfInstitution.name || 'Name'})`, 120, finalY + 24);
-    doc.setFont(undefined, 'bold');
-    doc.text('Signature of Head of Institution', 120, finalY + 28);
-
+    addSignatureBlock(doc, settings, doc.lastAutoTable.finalY);
 
     return doc.output('blob');
 };
@@ -239,9 +265,14 @@ const generateConsumptionRegister = (data: AppData, selectedMonth: string): Blob
         doc.text(schoolDetails.name, doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
         doc.setFontSize(12).setFont(undefined, 'normal');
         doc.text('Daily Consumption Register of Mid-day Meals', doc.internal.pageSize.getWidth() / 2, 16, { align: 'center' });
-        doc.setFontSize(10);
-        doc.text(`Month: ${monthName}, ${year}`, 14, 22);
-        doc.text(`Department: ${catName}`, doc.internal.pageSize.getWidth() - 14, 22, { align: 'right' });
+        
+        doc.autoTable({
+            startY: 18,
+            body: [[`Month: ${monthName}, ${year}`, `Department: ${catName}`]],
+            theme: 'plain',
+            styles: { fontSize: 10, cellPadding: 1 },
+            columnStyles: { 0: { halign: 'left' }, 1: { halign: 'right' } }
+        });
 
         const totalRate = rates.dalVeg[category] + rates.oilCond[category] + rates.salt[category] + rates.fuel[category];
         const head = [
@@ -316,17 +347,8 @@ const generateConsumptionRegister = (data: AppData, selectedMonth: string): Blob
             '', ''
         ]];
 
-        const abstractBody = [
-            [{ content: 'Abstract of Rice', colSpan: 2, styles: { fontStyle: 'bold', halign: 'center' } }, { content: 'Abstract of Cash', colSpan: 2, styles: { fontStyle: 'bold', halign: 'center' } }],
-            ['1. Opening Balance:', `${riceAbstracts[category].opening.toFixed(3)} Kg`, '1. Opening Balance:', `Rs ${cashAbstracts[category].opening.toFixed(2)}`],
-            ['2. Quantity received:', `${riceAbstracts[category].received.toFixed(3)} Kg`, '2. Amount received:', `Rs ${cashAbstracts[category].received.toFixed(2)}`],
-            ['3. Total Quantity:', `${riceAbstracts[category].total.toFixed(3)} Kg`, '3. Total Amount:', `Rs ${cashAbstracts[category].total.toFixed(2)}`],
-            ['4. Rice Consumed:', `${riceAbstracts[category].consumed.toFixed(3)} Kg`, '4. Expenditure:', `Rs ${cashAbstracts[category].expenditure.toFixed(2)}`],
-            ['5. Closing Balance:', `${riceAbstracts[category].balance.toFixed(3)} Kg`, '5. closing balance:', `Rs ${cashAbstracts[category].balance.toFixed(2)}`],
-        ];
-
         doc.autoTable({
-            startY: 25,
+            startY: doc.lastAutoTable.finalY + 1,
             head: head,
             body: body,
             foot: foot,
@@ -347,21 +369,32 @@ const generateConsumptionRegister = (data: AppData, selectedMonth: string): Blob
                 9: { cellWidth: 12 },   // Total
                 10: { cellWidth: 10 },  // Sign
                 11: { cellWidth: 35, halign: 'left' } // Reason
-            },
-            didDrawPage: function(hookData: any) {
-                 doc.autoTable({
-                    startY: hookData.cursor.y + 5,
-                    body: abstractBody,
-                    theme: 'grid',
-                    styles: { fontSize: 9, cellPadding: 2, lineWidth: 0.1 },
-                    columnStyles: {
-                        0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 42.5, halign: 'right' },
-                        2: { cellWidth: 35, fontStyle: 'bold' }, 3: { cellWidth: 42.5, halign: 'right' },
-                    },
-                    margin: {left: hookData.settings.margin.left}
-                });
             }
         });
+
+        const mainTableFinalY = doc.lastAutoTable.finalY;
+
+        const abstractBody = [
+            [{ content: 'Abstract of Rice', colSpan: 2, styles: { fontStyle: 'bold', halign: 'center' } }, { content: 'Abstract of Cash', colSpan: 2, styles: { fontStyle: 'bold', halign: 'center' } }],
+            ['1. Opening Balance:', `${riceAbstracts[category].opening.toFixed(3)} Kg`, '1. Opening Balance:', `Rs ${cashAbstracts[category].opening.toFixed(2)}`],
+            ['2. Quantity received:', `${riceAbstracts[category].received.toFixed(3)} Kg`, '2. Amount received:', `Rs ${cashAbstracts[category].received.toFixed(2)}`],
+            ['3. Total Quantity:', `${riceAbstracts[category].total.toFixed(3)} Kg`, '3. Total Amount:', `Rs ${cashAbstracts[category].total.toFixed(2)}`],
+            ['4. Rice Consumed:', `${riceAbstracts[category].consumed.toFixed(3)} Kg`, '4. Expenditure:', `Rs ${cashAbstracts[category].expenditure.toFixed(2)}`],
+            ['5. Closing Balance:', `${riceAbstracts[category].balance.toFixed(3)} Kg`, '5. closing balance:', `Rs ${cashAbstracts[category].balance.toFixed(2)}`],
+        ];
+
+        doc.autoTable({
+            startY: mainTableFinalY + 5,
+            body: abstractBody,
+            theme: 'grid',
+            styles: { fontSize: 9, cellPadding: 2, lineWidth: 0.1 },
+            columnStyles: {
+                0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 42.5, halign: 'right' },
+                2: { cellWidth: 35, fontStyle: 'bold' }, 3: { cellWidth: 42.5, halign: 'right' },
+            },
+        });
+
+        addSignatureBlock(doc, settings, doc.lastAutoTable.finalY);
     });
 
     return doc.output('blob');
@@ -460,6 +493,8 @@ const generateRollStatement = (data: AppData): Blob => {
         footStyles: { fontStyle: 'bold', fillColor: [230, 230, 230], textColor: 0 },
     });
 
+    addSignatureBlock(doc, settings, doc.lastAutoTable.finalY);
+
     return doc.output('blob');
 };
 
@@ -535,11 +570,9 @@ const generateRiceRequirementCertificate = (data: AppData, selectedMonth: string
 
         // ======== Footer ========
         const finalY = doc.lastAutoTable.finalY;
-        doc.text(`Date of Issue: ${new Date().toLocaleDateString('en-IN')}`, 21, finalY + 20);
-        doc.text('.........................................', 130, finalY + 40);
-        doc.setFont(undefined, 'bold');
-        doc.text('Signature of Head of Institution', 130, finalY + 45);
-        doc.text(`(${settings.headOfInstitution.name || 'Name'})`, 130, finalY + 50);
+        doc.setFontSize(9).setFont(undefined, 'normal');
+        doc.text(`Date of Issue: ${new Date().toLocaleDateString('en-IN')}`, 21, finalY + 15);
+        addSignatureBlock(doc, settings, finalY + 15);
     });
     
     if (pagesAdded === 0) {
