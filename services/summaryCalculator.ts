@@ -1,19 +1,37 @@
 import { AppData, MonthlyBalanceData, Category, AbstractData } from '../types';
 import { DEFAULT_SETTINGS } from '../constants';
 
-export const getOpeningBalanceForMonth = (data: AppData, selectedMonth: string): MonthlyBalanceData => {
-    const allBalanceKeys = Object.keys(data.monthlyBalances);
-    const previousBalanceKeys = allBalanceKeys.filter(key => key < selectedMonth).sort().reverse();
+// FIX: Replaced getOpeningBalanceForMonth with a more robust function that also returns
+// the key of the last saved month. This is crucial for correctly calculating receipts
+// over periods with no daily entries.
+export const getOpeningBalanceInfo = (data: AppData, selectedMonth: string): { balance: MonthlyBalanceData; lastBalanceMonth: string | null } => {
+    const allBalanceKeys = Object.keys(data.monthlyBalances).sort().reverse();
+    // Find the most recent month key that is strictly BEFORE the selected month.
+    const previousBalanceKey = allBalanceKeys.find(key => key < selectedMonth);
 
-    if (previousBalanceKeys.length > 0) {
-        const latestKey = previousBalanceKeys[0];
-        return data.monthlyBalances[latestKey];
+    if (previousBalanceKey) {
+        return { balance: data.monthlyBalances[previousBalanceKey], lastBalanceMonth: previousBalanceKey };
     }
     
-    return data.settings.initialOpeningBalance || { 
-        rice: { balvatika: 0, primary: 0, middle: 0 },
-        cash: { balvatika: 0, primary: 0, middle: 0 },
+    // If no previous balance is found, use the initial opening balance from settings.
+    return { 
+        balance: data.settings.initialOpeningBalance || { 
+            rice: { balvatika: 0, primary: 0, middle: 0 },
+            cash: { balvatika: 0, primary: 0, middle: 0 },
+        }, 
+        lastBalanceMonth: null 
     };
+};
+
+// NEW: Helper to get the next month's key string (e.g., '2024-05' -> '2024-06')
+const getNextMonthKey = (monthKey: string): string => {
+    const [year, month] = monthKey.split('-').map(Number);
+    // Use UTC to avoid timezone-related issues when incrementing month.
+    const date = new Date(Date.UTC(year, month - 1, 1));
+    date.setUTCMonth(date.getUTCMonth() + 1);
+    const nextYear = date.getUTCFullYear();
+    const nextMonth = String(date.getUTCMonth() + 1).padStart(2, '0');
+    return `${nextYear}-${nextMonth}`;
 };
 
 export const calculateMonthlySummary = (data: AppData, selectedMonth: string) => {
@@ -22,10 +40,18 @@ export const calculateMonthlySummary = (data: AppData, selectedMonth: string) =>
     const rates = data.settings.rates || DEFAULT_SETTINGS.rates;
     const categories: Category[] = ['balvatika', 'primary', 'middle'];
     
-    const openingBalance = getOpeningBalanceForMonth(data, selectedMonth);
+    // FIX: Use the new helper to get both the opening balance and the month it corresponds to.
+    const { balance: openingBalance, lastBalanceMonth } = getOpeningBalanceInfo(data, selectedMonth);
+
+    // If the last balance was from May ('2024-05'), we need receipts from June ('2024-06') onwards.
+    // If there's no prior balance, we start from an early date to include all receipts.
+    const receiptStartDate = lastBalanceMonth ? getNextMonthKey(lastBalanceMonth) : '0000-00';
 
     const received = data.receipts
-        .filter(r => r.date.startsWith(selectedMonth))
+        // FIX: The core of the bug fix. Filter receipts from the month AFTER the last saved balance,
+        // up to and including the currently selected month. This correctly accumulates receipts
+        // across any months that had no meal entries.
+        .filter(r => r.date.substring(0, 7) >= receiptStartDate && r.date.substring(0, 7) <= selectedMonth)
         .reduce((acc, r) => {
             categories.forEach(cat => {
                 acc.rice[cat] += r.rice[cat];

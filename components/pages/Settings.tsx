@@ -11,6 +11,7 @@ import { useToast } from '../../hooks/useToast';
 import { CLASS_STRUCTURE } from '../../constants';
 import { indianStates, jkDistrictsWithZones } from '../../data/locations';
 import { validateSettings } from '../../services/validator';
+import NumberInput from '../ui/NumberInput';
 
 
 const calculateSectionTotals = (classes: ClassRoll[]) => {
@@ -48,6 +49,7 @@ const SettingsPage: React.FC = () => {
     const [settings, setSettings] = useState<Settings>(data.settings);
     const { showToast } = useToast();
     const [isUdiseValid, setIsUdiseValid] = useState(settings.schoolDetails.udise.length === 11 || settings.schoolDetails.udise.length === 0);
+    const [isRatesEditable, setIsRatesEditable] = useState(false);
 
     const availableDistricts = useMemo(() => {
         const selectedStateData = indianStates.find(s => s.name === settings.schoolDetails.state);
@@ -106,8 +108,8 @@ const SettingsPage: React.FC = () => {
         }));
     };
 
-    const handleRateChange = (rateType: keyof Rates, category: Category, value: string) => {
-        setSettings(prev => ({ ...prev, rates: { ...prev.rates, [rateType]: { ...prev.rates[rateType], [category]: parseFloat(value) || 0 }}}));
+    const handleRateChange = (rateType: keyof Rates, category: Category, value: number) => {
+        setSettings(prev => ({ ...prev, rates: { ...prev.rates, [rateType]: { ...prev.rates[rateType], [category]: value || 0 }}}));
     };
     
      const handleOpeningBalanceChange = (
@@ -487,17 +489,35 @@ const SettingsPage: React.FC = () => {
                             </div>
                             <div>
                                 <h3 className="text-sm font-semibold text-stone-700 dark:text-gray-300 mb-2">Food Rate Configuration</h3>
+                                <div className="flex items-center justify-between p-3 mb-3 bg-amber-100/50 dark:bg-gray-800/50 rounded-lg">
+                                    <div>
+                                        <label htmlFor="edit-rates" className="font-medium text-stone-700 dark:text-gray-300">Edit Food Rates</label>
+                                        <p className="text-xs text-stone-500 dark:text-gray-400">Enable to adjust per-student rates.</p>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="edit-rates" className="sr-only peer" checked={isRatesEditable} onChange={e => setIsRatesEditable(e.target.checked)} />
+                                        <div className="w-11 h-6 bg-stone-200 dark:bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-amber-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                                    </label>
+                                </div>
                                 <div className="space-y-3 text-xs">
-                                    {(Object.keys(settings.rates) as Array<keyof Rates>).map(rateKey => (
+                                    {(Object.keys(settings.rates) as Array<keyof Rates>).map(rateKey => {
+                                        const isRice = rateKey === 'rice';
+                                        const currentStep = isRice ? 1 : 0.01;
+                                        const currentMax = isRice ? 1000 : 999;
+                                        return (
                                         <div key={rateKey}>
-                                            <p className="font-semibold text-amber-700 dark:text-amber-400 mb-1 capitalize">{rateKey.replace(/([A-Z])/g, ' $1')}</p>
+                                            <p className="font-semibold text-amber-700 dark:text-amber-400 mb-1 capitalize">
+                                                {rateKey.replace(/([A-Z])/g, ' $1')}
+                                                {isRice && <span className="font-normal text-stone-500"> (in grams)</span>}
+                                            </p>
                                             <div className="grid grid-cols-3 gap-2">
-                                                <Input label="Balvatika" id={`${rateKey}-bal`} type="number" step="0.01" value={settings.rates[rateKey].balvatika} onChange={e => handleRateChange(rateKey, 'balvatika', e.target.value)} min="0" max="999" />
-                                                <Input label="Primary" id={`${rateKey}-pri`} type="number" step="0.01" value={settings.rates[rateKey].primary} onChange={e => handleRateChange(rateKey, 'primary', e.target.value)} min="0" max="999" />
-                                                <Input label="Middle" id={`${rateKey}-mid`} type="number" step="0.01" value={settings.rates[rateKey].middle} onChange={e => handleRateChange(rateKey, 'middle', e.target.value)} min="0" max="999" />
+                                                <NumberInput label="Balvatika" id={`${rateKey}-bal`} step={currentStep} value={settings.rates[rateKey].balvatika} onChange={val => handleRateChange(rateKey, 'balvatika', val)} min={0} max={currentMax} disabled={!isRatesEditable} />
+                                                <NumberInput label="Primary" id={`${rateKey}-pri`} step={currentStep} value={settings.rates[rateKey].primary} onChange={val => handleRateChange(rateKey, 'primary', val)} min={0} max={currentMax} disabled={!isRatesEditable} />
+                                                <NumberInput label="Middle" id={`${rateKey}-mid`} step={currentStep} value={settings.rates[rateKey].middle} onChange={val => handleRateChange(rateKey, 'middle', val)} min={0} max={currentMax} disabled={!isRatesEditable} />
                                             </div>
                                         </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                             </div>
                         </div>

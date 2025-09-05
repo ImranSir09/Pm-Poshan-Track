@@ -116,8 +116,17 @@ const Dashboard: React.FC = () => {
 
             <DailyEntryPage />
 
-            <Card title="This Month's Totals">
-                <div className="grid grid-cols-3 gap-4 text-center">
+            <Card title="This Month's Totals" className="relative overflow-hidden">
+                <div aria-hidden="true" className="absolute -bottom-2 -right-2 text-amber-500/10 dark:text-amber-500/5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M10 20.5c0 .8.6 1.5 1.5 1.5h1c.8 0 1.5-.7 1.5-1.5v-1c0-.8-.7-1.5-1.5-1.5h-1c-.8 0-1.5.7-1.5 1.5v1Z"/>
+                        <path d="M8 12h.01"/>
+                        <path d="M19.1 7.4c-1-1.5-2.6-2.4-4.3-2.4H9.2C6 5 5 8 5 9.2c0 .8 0 1.2.1 1.5"/>
+                        <path d="M21 12c-1.2-1-2.9-1.2-4.2-.8"/>
+                        <path d="M5.3 12.8c-1.2.4-2.1 1.4-2.3 2.7-1.3 7.1 5.3 10.5 7 10.5h1.2c1.5 0 2.8-.4 4-1.2 1.3-1 2.3-2.4 2.8-4"/>
+                    </svg>
+                </div>
+                <div className="relative grid grid-cols-3 gap-4 text-center">
                     <div>
                         <p className="text-xs text-stone-500 dark:text-gray-400">Meal Days</p>
                         <p className="text-lg font-bold text-amber-700 dark:text-amber-400">{dashboardData.mealDays}</p>
@@ -133,30 +142,40 @@ const Dashboard: React.FC = () => {
                 </div>
             </Card>
             
-            <Card title="Daily Attendance">
-                <div style={{ width: '100%', height: 100 }}>
-                    <ResponsiveContainer>
-                        <BarChart data={dashboardData.monthlyData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                            <XAxis dataKey="name" tick={{ fill: '#78716c', fontSize: 10 }} axisLine={{ stroke: '#d6d3d1' }} tickLine={{ stroke: '#d6d3d1' }} className="dark:tick={{ fill: '#9ca3af' }} dark:axisLine={{ stroke: '#4b5563' }} dark:tickLine={{ stroke: '#4b5563' }}" />
-                            <YAxis tick={{ fill: '#78716c', fontSize: 10 }} axisLine={{ stroke: '#d6d3d1' }} tickLine={{ stroke: '#d6d3d1' }} className="dark:tick={{ fill: '#9ca3af' }} dark:axisLine={{ stroke: '#4b5563' }} dark:tickLine={{ stroke: '#4b5563' }}" />
-                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(180,180,120,0.1)' }} />
-                            <Bar dataKey="balvatika" stackId="a" fill="#a8a29e" radius={[5, 5, 0, 0]} barSize={10} >
-                                 {dashboardData.monthlyData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.date.getDay() === 0 ? '#ef4444' : '#a8a29e'} />
-                                ))}
-                            </Bar>
-                            <Bar dataKey="primary" stackId="a" fill="#f59e0b" barSize={10}>
-                                {dashboardData.monthlyData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.date.getDay() === 0 ? '#ef4444' : '#f59e0b'} />
-                                ))}
-                            </Bar>
-                             <Bar dataKey="middle" stackId="a" fill="#ffc658" radius={[5, 5, 0, 0]} barSize={10}>
-                                {dashboardData.monthlyData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.date.getDay() === 0 ? '#ef4444' : '#ffc658'} />
-                                ))}
-                             </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
+            <Card title="Daily Attendance" className="relative overflow-hidden">
+                <div aria-hidden="true" className="absolute -bottom-2 -right-2 text-amber-500/10 dark:text-amber-500/5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                </div>
+                <div className="relative">
+                    <div style={{ width: '100%', height: 100 }}>
+                        <ResponsiveContainer>
+                            <BarChart data={dashboardData.monthlyData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                                <XAxis dataKey="name" tick={{ fill: '#78716c', fontSize: 10 }} axisLine={{ stroke: '#d6d3d1' }} tickLine={{ stroke: '#d6d3d1' }} className="dark:tick={{ fill: '#9ca3af' }} dark:axisLine={{ stroke: '#4b5563' }} dark:tickLine={{ stroke: '#4b5563' }}" />
+                                <YAxis tick={{ fill: '#78716c', fontSize: 10 }} axisLine={{ stroke: '#d6d3d1' }} tickLine={{ stroke: '#d6d3d1' }} className="dark:tick={{ fill: '#9ca3af' }} dark:axisLine={{ stroke: '#4b5563' }} dark:tickLine={{ stroke: '#4b5563' }}" />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(180,180,120,0.1)' }} />
+                                <Bar dataKey="balvatika" stackId="a" fill="#a8a29e" radius={[5, 5, 0, 0]} barSize={10} >
+                                     {dashboardData.monthlyData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.date.getDay() === 0 ? '#ef4444' : '#a8a29e'} />
+                                    ))}
+                                </Bar>
+                                <Bar dataKey="primary" stackId="a" fill="#f59e0b" barSize={10}>
+                                    {dashboardData.monthlyData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.date.getDay() === 0 ? '#ef4444' : '#f59e0b'} />
+                                    ))}
+                                </Bar>
+                                 <Bar dataKey="middle" stackId="a" fill="#ffc658" radius={[5, 5, 0, 0]} barSize={10}>
+                                    {dashboardData.monthlyData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.date.getDay() === 0 ? '#ef4444' : '#ffc658'} />
+                                    ))}
+                                 </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
                      <div className="flex justify-center items-center space-x-4 mt-2 text-xs text-stone-600 dark:text-gray-300">
                         <div className="flex items-center"><div className="w-3 h-3 rounded-full bg-[#a8a29e] mr-1"></div>Balvatika</div>
                         <div className="flex items-center"><div className="w-3 h-3 rounded-full bg-[#f59e0b] mr-1"></div>Primary</div>

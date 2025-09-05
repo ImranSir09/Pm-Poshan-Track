@@ -198,48 +198,39 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     const importData = useCallback((importedData: AppData) => {
-        let finalData = importedData;
-
-        // If the imported backup file lacks a password (e.g., from an older app version),
-        // preserve the existing authentication data. This prevents the user from being
-        // redirected to the setup page.
-        if (!importedData.auth?.password) {
-            finalData = { ...importedData, auth: data.auth };
-        }
-
         try {
-            // Synchronously save the complete new dataset to localStorage. This is critical
-            // to prevent data loss or state inconsistencies if the user reloads the page.
+            let finalData = importedData;
+            // Preserve authentication if the imported file doesn't have it
+            if (!importedData.auth?.password) {
+                finalData = { ...importedData, auth: data.auth };
+            }
+            // Persist synchronously to guarantee it's saved before reload.
             localStorage.setItem(APP_DATA_KEY, JSON.stringify(finalData));
-            showToast('Data imported! The app will now reload.', 'success');
+            
+            // Also update the state for consistency before the reload.
+            // This prevents a brief flash of old content if the component re-renders.
+            setData(finalData);
 
-            // Reload the application after a short delay to ensure it starts fresh
-            // with the newly imported and persisted state. This provides the most stable experience.
+            showToast('Data imported successfully! The app will now reload.', 'success');
+            // Reload the application to apply the new state cleanly from storage.
             setTimeout(() => {
                 window.location.reload();
             }, 1500);
-
         } catch (error) {
-            console.error("Failed to save imported data to localStorage", error);
-            showToast("Could not save imported data. Storage may be full.", "error");
+            console.error("Failed to import data:", error);
+            showToast("Failed to import data. The file may be corrupt or storage is full.", "error");
         }
-    }, [data.auth]);
+    }, [data.auth, setData]);
 
     const resetData = useCallback(() => {
-        // Clear storage synchronously to ensure a clean state on reload
+        // Clear storage synchronously.
         localStorage.removeItem(APP_DATA_KEY);
         sessionStorage.removeItem('pm-poshan-auth');
-
-        setData({
-            auth: { username: '', securityQuestion: '', securityAnswer: '' },
-            settings: DEFAULT_SETTINGS,
-            entries: [],
-            receipts: [],
-            monthlyBalances: {},
-            lastBackupDate: undefined,
-        });
-
-        window.location.reload();
+        
+        // The parent component shows a toast. We delay reload to ensure it's visible.
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
     }, []);
 
     return (

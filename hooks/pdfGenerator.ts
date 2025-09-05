@@ -459,6 +459,92 @@ const generateRollStatement = (data: AppData): Blob => {
     return doc.output('blob');
 };
 
+const generateRiceRequirementCertificate = (data: AppData, selectedMonth: string): Blob => {
+    const { settings } = data;
+    const { schoolDetails, rates } = settings;
+    const summary = calculateMonthlySummary(data, selectedMonth);
+    const { monthEntries } = summary;
+
+    const doc = new jspdf.jsPDF();
+    let pagesAdded = 0;
+
+    const categories: Category[] = ['balvatika', 'primary', 'middle'];
+    const monthDate = new Date(`${selectedMonth}-02`);
+    const monthName = monthDate.toLocaleString('default', { month: 'long' });
+    const year = monthDate.getFullYear();
+    const workingDays = monthEntries.filter(e => e.totalPresent > 0).length;
+
+    categories.forEach(category => {
+        const catName = category.charAt(0).toUpperCase() + category.slice(1);
+        const enrollment = settings.classRolls.filter(c => {
+            if (['bal', 'pp1', 'pp2'].includes(c.id)) return category === 'balvatika';
+            if (['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)) return category === 'primary';
+            if (['c6', 'c7', 'c8'].includes(c.id)) return category === 'middle';
+            return false;
+        }).reduce((sum, c) => sum + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0);
+
+        if (enrollment === 0) return; // Skip certificate if no students are enrolled in this category
+
+        if (pagesAdded > 0) {
+            doc.addPage();
+        }
+        pagesAdded++;
+
+        // ======== Header ========
+        doc.setFontSize(16).setFont(undefined, 'bold');
+        doc.text(schoolDetails.name, doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
+        doc.setFontSize(10).setFont(undefined, 'normal');
+        doc.text(`UDISE: ${schoolDetails.udise}`, doc.internal.pageSize.getWidth() / 2, 26, { align: 'center' });
+        doc.text(`${schoolDetails.village}, ${schoolDetails.block}, ${schoolDetails.district}`, doc.internal.pageSize.getWidth() / 2, 32, { align: 'center' });
+
+        // ======== Title ========
+        doc.setFontSize(14).setFont(undefined, 'bold');
+        doc.text('Rice Requirement Certificate', doc.internal.pageSize.getWidth() / 2, 50, { align: 'center' });
+        doc.setLineWidth(0.5);
+        doc.line(70, 52, 140, 52);
+
+        // ======== Body ========
+        doc.setFontSize(11).setFont(undefined, 'normal');
+        const bodyText = `This is to certify that the following quantity of rice is required for the ${catName} category under the PM-POSHAN (Mid-Day Meal) scheme at our school for the month of ${monthName}, ${year}.`;
+        const splitText = doc.splitTextToSize(bodyText, 170);
+        doc.text(splitText, 21, 70);
+
+        // ======== Details Table ========
+        const riceRateGrams = rates.rice[category];
+        const totalRiceKg = (enrollment * workingDays * riceRateGrams) / 1000;
+
+        doc.autoTable({
+            startY: 90,
+            head: [['Description', 'Value']],
+            body: [
+                ['Student Category', catName],
+                ['Total Enrollment in Category', `${enrollment} students`],
+                ['Number of School/Working Days', `${workingDays} days`],
+                ['Rice Allocation Rate per Student', `${riceRateGrams} grams`],
+                [{ content: 'Total Rice Requirement', styles: { fontStyle: 'bold' } }, { content: `${totalRiceKg.toFixed(3)} Kg`, styles: { fontStyle: 'bold' } }],
+            ],
+            theme: 'grid',
+            headStyles: { fillColor: [240, 240, 240], textColor: 0 },
+            styles: { fontSize: 10, cellPadding: 3 },
+            columnStyles: { 0: { fontStyle: 'bold' } }
+        });
+
+        // ======== Footer ========
+        const finalY = doc.lastAutoTable.finalY;
+        doc.text(`Date of Issue: ${new Date().toLocaleDateString('en-IN')}`, 21, finalY + 20);
+        doc.text('.........................................', 130, finalY + 40);
+        doc.setFont(undefined, 'bold');
+        doc.text('Signature of Head Teacher', 130, finalY + 45);
+        doc.text(`(${settings.mdmIncharge.name || 'Name'})`, 130, finalY + 50);
+    });
+    
+    if (pagesAdded === 0) {
+        throw new Error("No students enrolled in any category. Cannot generate requirement certificate.");
+    }
+
+    return doc.output('blob');
+};
+
 export const generatePDFReport = (reportType: string, data: AppData, selectedMonth: string): { pdfBlob: Blob; filename: string } => {
     const schoolName = data.settings.schoolDetails.name.replace(/\s+/g, '_');
     let pdfBlob: Blob;
@@ -476,6 +562,10 @@ export const generatePDFReport = (reportType: string, data: AppData, selectedMon
         case 'roll_statement':
             pdfBlob = generateRollStatement(data);
             filename = `Roll_Statement_${schoolName}.pdf`;
+            break;
+        case 'rice_requirement':
+            pdfBlob = generateRiceRequirementCertificate(data, selectedMonth);
+            filename = `Rice_Requirement_${schoolName}_${selectedMonth}.pdf`;
             break;
         default:
             throw new Error(`Unknown report type: ${reportType}`);

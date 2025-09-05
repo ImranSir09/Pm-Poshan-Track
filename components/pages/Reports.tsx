@@ -7,6 +7,7 @@ import Modal from '../ui/Modal';
 import { AppData } from '../../types';
 import PDFPreviewModal from '../ui/PDFPreviewModal';
 import { generatePDFReport } from '../../hooks/pdfGenerator';
+import { validateImportData } from '../../services/dataValidator';
 
 const Reports: React.FC = () => {
     const { data, importData, resetData, updateLastBackupDate } = useData();
@@ -25,6 +26,7 @@ const Reports: React.FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [pdfPreviewData, setPdfPreviewData] = useState<{ blobUrl: string; pdfBlob: Blob; filename: string } | null>(null);
+    const [importConfirmation, setImportConfirmation] = useState<{ data: AppData; summary: Record<string, string | number> } | null>(null);
 
     const handleReportExport = () => {
         setIsGenerating(true);
@@ -70,22 +72,29 @@ const Reports: React.FC = () => {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            const schoolName = data.settings.schoolDetails.name.replace(/\s+/g, '_');
+            
+            const schoolName = (data.settings.schoolDetails.name || 'School').replace(/[\\/:"*?<>|.\s]+/g, '_');
+            
             const today = new Date();
             const yyyy = today.getFullYear();
             const mm = String(today.getMonth() + 1).padStart(2, '0');
             const dd = String(today.getDate()).padStart(2, '0');
             const dateString = `${yyyy}-${mm}-${dd}`;
+            
             a.download = `PM_POSHAN_Backup_${schoolName}_${dateString}.json`;
             document.body.appendChild(a);
             a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+
             showToast('Data exported successfully!', 'success');
             updateLastBackupDate();
         } catch (error) {
-            showToast('Error exporting data.', 'error');
-            console.error(error);
+            showToast('Error exporting data. Check browser permissions or try again.', 'error');
+            console.error("Data export failed:", error);
         }
     };
 
@@ -98,19 +107,43 @@ const Reports: React.FC = () => {
         if (!file) return;
 
         const reader = new FileReader();
+        
         reader.onload = (e) => {
             try {
                 const text = e.target?.result;
                 if (typeof text !== 'string') throw new Error('Invalid file content');
-                const parsedData = JSON.parse(text) as AppData;
-                importData(parsedData);
+                const parsedData = JSON.parse(text);
+                
+                const { isValid, errors, summary } = validateImportData(parsedData);
+
+                if (!isValid) {
+                    errors.forEach(err => showToast(err, 'error'));
+                    showToast('Import failed. The file is invalid or corrupted.', 'error');
+                    return;
+                }
+                
+                setImportConfirmation({ data: parsedData as AppData, summary });
+
             } catch (error) {
-                showToast('Failed to import data. Invalid file format.', 'error');
+                showToast('Failed to read or parse the file. It may be corrupted.', 'error');
                 console.error(error);
             }
         };
+
+        reader.onerror = (e) => {
+            console.error("FileReader error:", e);
+            showToast('Could not read the file. It may be corrupted or your browser is preventing access.', 'error');
+        };
+
         reader.readAsText(file);
         event.target.value = ''; // Reset input
+    };
+    
+    const handleConfirmImport = () => {
+        if (importConfirmation) {
+            importData(importConfirmation.data);
+            setImportConfirmation(null);
+        }
     };
 
     const handleReset = () => {
@@ -118,6 +151,8 @@ const Reports: React.FC = () => {
         setResetModalOpen(false);
         showToast('All application data has been reset.', 'success');
     };
+    
+    const needsMonth = !['roll_statement'].includes(reportType);
 
     return (
         <>
@@ -136,6 +171,25 @@ const Reports: React.FC = () => {
                     <Button variant="danger" onClick={handleReset}>Yes, Reset Data</Button>
                 </div>
             </Modal>
+            
+            <Modal isOpen={!!importConfirmation} onClose={() => setImportConfirmation(null)} title="Confirm Data Import">
+                <div className="space-y-4">
+                    <p className="text-sm text-stone-600 dark:text-gray-300">
+                        Please review the details from the file before importing.
+                        <strong className="block mt-1 text-yellow-600 dark:text-yellow-400">Warning: This will overwrite all current application data.</strong>
+                    </p>
+                    <div className="text-sm space-y-2 bg-amber-100/40 dark:bg-gray-800/50 p-3 rounded-lg">
+                        <p><strong>School Name:</strong> {importConfirmation?.summary.schoolName}</p>
+                        <p><strong>UDISE:</strong> {importConfirmation?.summary.udise}</p>
+                        <p><strong>Daily Entries Found:</strong> {importConfirmation?.summary.entryCount}</p>
+                        <p><strong>Receipts Found:</strong> {importConfirmation?.summary.receiptCount}</p>
+                    </div>
+                    <div className="flex justify-end space-x-2">
+                        <Button variant="secondary" onClick={() => setImportConfirmation(null)}>Cancel</Button>
+                        <Button variant="danger" onClick={handleConfirmImport}>Confirm & Overwrite</Button>
+                    </div>
+                </div>
+            </Modal>
         
             <div className="space-y-4">
                 <Card title="Export Reports">
@@ -151,9 +205,10 @@ const Reports: React.FC = () => {
                                 <option value="mdcf">Monthly Data Collection Format (MDCF)</option>
                                 <option value="roll_statement">Roll Statement</option>
                                 <option value="daily_consumption">Daily Consumption Register</option>
+                                <option value="rice_requirement">Rice Requirement Certificate</option>
                             </select>
                         </div>
-                        {reportType !== 'roll_statement' && (
+                        {needsMonth && (
                             <div>
                                 <label htmlFor="month-select" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Select Month</label>
                                 <input
@@ -191,7 +246,7 @@ const Reports: React.FC = () => {
                         <div>
                             <p className="text-sm font-medium mb-1">Import Data</p>
                             <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">Load data from a previously exported JSON file. This will overwrite current data.</p>
-                            <Button onClick={handleImportClick} variant="secondary" className="w-full">Import from JSON</Button>
+                            <Button onClick={handleImportClick} variant="secondary" className="w-full">Select File to Import</Button>
                             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
                         </div>
                     </div>

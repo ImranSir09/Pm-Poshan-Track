@@ -297,47 +297,57 @@ const DailyEntryPage: React.FC = () => {
                     </div>
                 </div>
             </Modal>
-            <Card title="Daily Meal Entry">
-                 {showDatePicker ? (
-                    <div className="space-y-3">
-                        <Input label="Select Date" id="entry-date" type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} max={today} />
-                         {isSunday && (
-                            <div className="text-center p-2 bg-red-100 dark:bg-red-900/30 rounded-lg text-red-700 dark:text-red-300 text-xs">
-                                Entries are disabled for Sundays.
-                            </div>
-                        )}
-                        <div className="flex space-x-2">
-                            <Button onClick={() => setEntryModalOpen(true)} className="w-full" disabled={isSunday}>
-                                Load & Edit Entry
-                            </Button>
-                            <Button variant="secondary" onClick={() => { setShowDatePicker(false); setSelectedDate(today); }} className="w-full">
-                                Cancel
-                            </Button>
-                        </div>
-                    </div>
-                ) : (
-                    <div>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="font-semibold">{new Date(today + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long' })}</p>
-                                <p className="text-sm text-stone-500 dark:text-gray-400">{new Date(today + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}</p>
-                            </div>
-                            <div className="text-right">
-                                <Button onClick={() => { setSelectedDate(today); setEntryModalOpen(true); }} disabled={isSunday}>
-                                    Add / Edit
+            <Card title="Daily Meal Entry" className="relative overflow-hidden">
+                <div aria-hidden="true" className="absolute -bottom-4 -right-4 text-amber-500/10 dark:text-amber-500/5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 12.2c0-3.3 2.9-6.2 6.5-6.2h7c3.6 0 6.5 2.9 6.5 6.2c0 1.9-1.2 3.6-2.7 4.5l-1.5 1c-1.1.7-2.3 1.3-3.3 1.3H9.5c-1 0-2.2-.6-3.3-1.3l-1.5-1C3.2 15.8 2 14.1 2 12.2Z"/>
+                        <path d="M6 6s.5 2.2 2.2 2.2"/>
+                        <path d="M15.8 6s.5 2.2 2.2 2.2"/>
+                        <path d="M10.9 6s.5 2.2 2.2 2.2"/>
+                    </svg>
+                </div>
+                 <div className="relative">
+                    {showDatePicker ? (
+                        <div className="space-y-3">
+                            <Input label="Select Date" id="entry-date" type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} max={today} />
+                            {isSunday && (
+                                <div className="text-center p-2 bg-red-100 dark:bg-red-900/30 rounded-lg text-red-700 dark:text-red-300 text-xs">
+                                    Entries are disabled for Sundays.
+                                </div>
+                            )}
+                            <div className="flex space-x-2">
+                                <Button onClick={() => setEntryModalOpen(true)} className="w-full" disabled={isSunday}>
+                                    Load & Edit Entry
                                 </Button>
-                                <button onClick={() => setShowDatePicker(true)} className="block w-full text-center text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 text-xs pt-1">
-                                    Edit another...
-                                </button>
+                                <Button variant="secondary" onClick={() => { setShowDatePicker(false); setSelectedDate(today); }} className="w-full">
+                                    Cancel
+                                </Button>
                             </div>
                         </div>
-                        {isSunday && selectedDate === today && (
-                            <div className="text-center mt-3 p-2 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-500/50 rounded-lg text-red-700 dark:text-red-300 text-xs">
-                                Entries are disabled for today (Sunday).
+                    ) : (
+                        <div>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="font-semibold">{new Date(today + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long' })}</p>
+                                    <p className="text-sm text-stone-500 dark:text-gray-400">{new Date(today + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}</p>
+                                </div>
+                                <div className="text-right">
+                                    <Button onClick={() => { setSelectedDate(today); setEntryModalOpen(true); }} disabled={isSunday}>
+                                        Add / Edit
+                                    </Button>
+                                    <button onClick={() => setShowDatePicker(true)} className="block w-full text-center text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 text-xs pt-1">
+                                        Edit another...
+                                    </button>
+                                </div>
                             </div>
-                        )}
-                    </div>
-                )}
+                            {isSunday && selectedDate === today && (
+                                <div className="text-center mt-3 p-2 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-500/50 rounded-lg text-red-700 dark:text-red-300 text-xs">
+                                    Entries are disabled for today (Sunday).
+                                </div>
+                            )}
+                        </div>
+                    )}
+                 </div>
             </Card>
         </>
     );

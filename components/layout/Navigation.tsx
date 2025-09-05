@@ -1,4 +1,3 @@
-
 import React from 'react';
 // FIX: The 'Page' type is exported from 'types.ts', not 'App.tsx'. Correcting the import path.
 import { Page } from '../../types';
@@ -40,8 +39,8 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage, setCurrentPage }) 
     ];
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-gray-900/80 backdrop-blur-md border-t border-amber-200/50 dark:border-white/20">
-            <div className="flex justify-around max-w-2xl mx-auto">
+        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-amber-200/50 dark:border-white/20">
+            <div className="max-w-2xl mx-auto flex items-center justify-around">
                 {navItems.map(item => (
                     <NavButton
                         key={item.id}
