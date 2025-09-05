@@ -7,6 +7,7 @@ import Input from '../ui/Input';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import TermsModal from '../ui/TermsModal';
+import PasswordInput from '../ui/PasswordInput';
 
 const LoginPage: React.FC = () => {
     const { login, resetPassword } = useAuth();
@@ -70,17 +71,15 @@ const LoginPage: React.FC = () => {
                         value={securityAnswer}
                         onChange={e => setSecurityAnswer(e.target.value)}
                     />
-                     <Input
+                     <PasswordInput
                         label="New Password (min. 6 characters)"
                         id="reset-new-password"
-                        type="password"
                         value={newPassword}
                         onChange={e => setNewPassword(e.target.value)}
                     />
-                     <Input
+                     <PasswordInput
                         label="Confirm New Password"
                         id="reset-confirm-password"
-                        type="password"
                         value={confirmNewPassword}
                         onChange={e => setConfirmNewPassword(e.target.value)}
                     />
@@ -106,10 +105,9 @@ const LoginPage: React.FC = () => {
                     </div>
                     <Card>
                         <form onSubmit={handleLogin} className="space-y-4">
-                            <Input
+                            <PasswordInput
                                 label="Password"
                                 id="password"
-                                type="password"
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
                                 required

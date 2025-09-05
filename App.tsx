@@ -69,11 +69,23 @@ const AuthenticatedApp: React.FC = () => {
     return (
         <NotificationProvider setCurrentPage={setCurrentPage}>
             <div className="min-h-screen text-stone-800 dark:text-stone-200 font-sans">
-                <div className="fixed top-0 left-0 w-full h-full overflow-hidden">
+                {/* Background Blobs Layer */}
+                <div className="fixed top-0 left-0 w-full h-full overflow-hidden z-0">
                     <div className="animated-blob blob-1 bg-amber-300 dark:bg-amber-900"></div>
                     <div className="animated-blob blob-2 bg-orange-300 dark:bg-orange-900"></div>
                 </div>
-                <div className="container mx-auto p-2 pb-24 max-w-2xl relative">
+
+                {/* Background Illustration Layer */}
+                <div
+                    aria-hidden="true"
+                    className="fixed inset-0 z-0 opacity-5 dark:opacity-[0.02] bg-repeat"
+                    style={{
+                        backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%230c0a09' fill-opacity='1'%3E%3Cpath d='M80 80V0h-29.333L0 29.333V80h80zM29.333 0H0v29.333L80 0h-50.667z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                    }}
+                ></div>
+
+                {/* Content Layer */}
+                <div className="container mx-auto p-2 pb-24 max-w-2xl relative z-10">
                     <Header />
                     <main className="mt-4">
                         <div key={currentPage} className="page-transition-wrapper">

@@ -1,3 +1,4 @@
+
 import { AppData, Category, ClassRoll } from '../types';
 import { calculateMonthlySummary } from '../services/summaryCalculator';
 import { CLASS_STRUCTURE } from '../constants';
@@ -331,18 +332,18 @@ const generateConsumptionRegister = (data: AppData, selectedMonth: string): Blob
             headStyles: { fontStyle: 'bold', fillColor: [230, 230, 230], textColor: 0, lineWidth: 0.1, fontSize: 7 },
             footStyles: { fontStyle: 'bold', fillColor: [230, 230, 230], textColor: 0, lineWidth: 0.1 },
             columnStyles: {
-                0: { cellWidth: 7 },
-                1: { cellWidth: 16, halign: 'left' },
-                2: { cellWidth: 10 },
-                3: { cellWidth: 10 },
-                4: { cellWidth: 15 },
-                5: { cellWidth: 15 },
-                6: { cellWidth: 15 },
-                7: { cellWidth: 15 },
-                8: { cellWidth: 15 },
-                9: { cellWidth: 15 },
-                10: { cellWidth: 12 },
-                11: { cellWidth: 35, halign: 'left' }
+                0: { cellWidth: 6 }, // S.No
+                1: { cellWidth: 15, halign: 'left' }, // Date
+                2: { cellWidth: 8 }, // Roll
+                3: { cellWidth: 8 }, // Present
+                4: { cellWidth: 14 }, // Rice
+                5: { cellWidth: 14 }, // Dal/Veg
+                6: { cellWidth: 14 }, // Oil/Cond
+                7: { cellWidth: 14 }, // Salt
+                8: { cellWidth: 14 }, // Fuel
+                9: { cellWidth: 14 }, // Total
+                10: { cellWidth: 10 }, // Sign
+                11: { cellWidth: 34, halign: 'left' } // Reason
             },
             didDrawPage: function(hookData: any) {
                  doc.autoTable({
@@ -351,8 +352,8 @@ const generateConsumptionRegister = (data: AppData, selectedMonth: string): Blob
                     theme: 'grid',
                     styles: { fontSize: 9, cellPadding: 2, lineWidth: 0.1 },
                     columnStyles: {
-                        0: { cellWidth: 45, fontStyle: 'bold' }, 1: { cellWidth: 45, halign: 'right' },
-                        2: { cellWidth: 45, fontStyle: 'bold' }, 3: { cellWidth: 45, halign: 'right' },
+                        0: { cellWidth: 42, fontStyle: 'bold' }, 1: { cellWidth: 42, halign: 'right' },
+                        2: { cellWidth: 42, fontStyle: 'bold' }, 3: { cellWidth: 42, halign: 'right' },
                     },
                     margin: {left: hookData.settings.margin.left}
                 });
