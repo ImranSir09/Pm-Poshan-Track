@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Button from './Button';
 
@@ -14,25 +15,34 @@ const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({ isOpen, onClose, pdfU
     if (!isOpen) return null;
 
     const handleDownload = () => {
-        if (!pdfBlob) {
-            // Fallback for safety, using the provided URL
+        // Prioritize using the raw blob for downloading as it's more direct and reliable.
+        if (pdfBlob) {
+            const downloadUrl = URL.createObjectURL(pdfBlob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+    
+            // Use a timeout to ensure the browser has initiated the download
+            // before the link is removed and the object URL is revoked.
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(downloadUrl);
+            }, 100);
+        } else {
+            // Fallback to the provided URL if the blob isn't available.
+            // This will work for data URIs but is less efficient.
+            console.warn("PDF blob not available for download, falling back to URL.");
             const link = document.createElement('a');
             link.href = pdfUrl;
             link.download = filename;
             document.body.appendChild(link);
             link.click();
-            document.body.removeChild(link);
-            return;
+            setTimeout(() => {
+                document.body.removeChild(link);
+            }, 100);
         }
-        // Preferred method: create a temporary URL from the blob for downloading
-        const url = URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url); // Clean up the temporary URL
     };
 
     return (
@@ -68,7 +78,7 @@ const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({ isOpen, onClose, pdfU
                 >
                     <div className="flex flex-col items-center justify-center h-full text-white p-4 text-center">
                         <p className="mb-4 text-lg">PDF preview is not available in your browser.</p>
-                        <p className="text-sm mb-4">Please download the file to view it.</p>
+                        <p className="text-sm mb-4">You can download the file to view it.</p>
                         <Button onClick={handleDownload}>
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />

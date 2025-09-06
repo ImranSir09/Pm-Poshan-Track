@@ -19,6 +19,16 @@ const reportDescriptions: Record<string, string> = {
     yearly_consumption_detailed: "A comprehensive yearly report with category-wise monthly breakdowns of consumption, stock, and funds."
 };
 
+// Helper function to convert Blob to a Data URL for embedding
+const convertBlobToDataURL = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(blob);
+    });
+};
+
 const Reports: React.FC = () => {
     const { data } = useData();
     const { showToast } = useToast();
@@ -130,25 +140,26 @@ const Reports: React.FC = () => {
     const handleReportExport = () => {
         setIsGenerating(true);
         // Use a timeout to allow the UI to update before the main thread is blocked by PDF generation
-        setTimeout(() => {
+        setTimeout(async () => {
             try {
-                // Revoke previous blob URL if it exists to avoid memory leaks
-                if (pdfPreviewData?.blobUrl) {
-                    URL.revokeObjectURL(pdfPreviewData.blobUrl);
-                }
-                const result = generatePDFReport(reportType, data, ['yearly_consumption_detailed'].includes(reportType) ? selectedFinancialYear : selectedMonth);
-                const blobUrl = URL.createObjectURL(result.pdfBlob);
+                const parameter = ['yearly_consumption_detailed'].includes(reportType) ? selectedFinancialYear : selectedMonth;
+                const { pdfBlob, filename } = generatePDFReport(reportType, data, parameter);
+
+                // Convert blob to a base64 data URL for robust previewing in browsers
+                const dataUrl = await convertBlobToDataURL(pdfBlob);
+                
                 setPdfPreviewData({ 
-                    blobUrl, 
-                    pdfBlob: result.pdfBlob, 
-                    filename: result.filename 
+                    blobUrl: dataUrl, 
+                    pdfBlob: pdfBlob, 
+                    filename: filename 
                 });
+
                 if (!isPreviewOpen) {
                     setIsPreviewOpen(true);
                 }
                 showToast('Report generated successfully!', 'success');
             } catch (error: any) {
-                console.error("PDF generation failed:", error);
+                console.error("PDF generation or conversion failed:", error);
                 showToast(error.message || 'Failed to generate PDF report.', 'error');
             } finally {
                 setIsGenerating(false);
@@ -157,9 +168,7 @@ const Reports: React.FC = () => {
     };
 
     const handleClosePreview = () => {
-        if (pdfPreviewData?.blobUrl) {
-            URL.revokeObjectURL(pdfPreviewData.blobUrl);
-        }
+        // Data URIs don't need to be revoked, so we just clear the state.
         setIsPreviewOpen(false);
         setPdfPreviewData(null);
     };
