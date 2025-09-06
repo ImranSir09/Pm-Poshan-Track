@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { useData } from '../../hooks/useData';
@@ -14,7 +14,8 @@ const reportDescriptions: Record<string, string> = {
     mdcf: "Generates the official Monthly Data Collection Format (MDCF) required for reporting.",
     roll_statement: "Creates a summary of student enrollment numbers by class and social category.",
     daily_consumption: "Produces a detailed, register-style log of daily meals, attendance, and expenditure for the selected month.",
-    rice_requirement: "Generates a formal certificate for the monthly rice requirement based on enrollment and working days."
+    rice_requirement: "Generates a formal certificate for the monthly rice requirement based on enrollment and working days.",
+    yearly_consumption: "Creates a comprehensive yearly report with monthly breakdowns of consumption, stock, and funds in a landscape format."
 };
 
 const Reports: React.FC = () => {
@@ -30,6 +31,21 @@ const Reports: React.FC = () => {
         const month = String(d.getMonth() + 1).padStart(2, '0');
         return `${year}-${month}`;
     });
+    
+    // Logic for financial year selection
+    const financialYearOptions = useMemo(() => {
+        const currentMonth = new Date().getMonth(); // 0-11
+        const currentYear = new Date().getFullYear();
+        // If it's Jan, Feb, March, the current financial year is still the previous one.
+        const endYear = currentMonth < 3 ? currentYear : currentYear + 1;
+        const options = [];
+        for (let i = 0; i < 5; i++) {
+            const year = endYear - i;
+            options.push(`${year - 1}-${year}`); // e.g. 2023-2024
+        }
+        return options;
+    }, []);
+    const [selectedFinancialYear, setSelectedFinancialYear] = useState(financialYearOptions[0]);
     
     const [isGenerating, setIsGenerating] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -100,6 +116,13 @@ const Reports: React.FC = () => {
                     'Total Rice Required': `${totalRiceKg.toFixed(3)} kg`,
                 };
                 break;
+            case 'yearly_consumption':
+                newSummary = {
+                    'Report': 'Yearly Consumption Report',
+                    'For Financial Year': selectedFinancialYear,
+                    'Note': 'This report processes data for 12 months and may take a moment to generate.'
+                };
+                break;
         }
 
         setReportSummary(newSummary);
@@ -115,7 +138,7 @@ const Reports: React.FC = () => {
                 if (pdfPreviewData?.blobUrl) {
                     URL.revokeObjectURL(pdfPreviewData.blobUrl);
                 }
-                const result = generatePDFReport(reportType, data, selectedMonth);
+                const result = generatePDFReport(reportType, data, reportType === 'yearly_consumption' ? selectedFinancialYear : selectedMonth);
                 const blobUrl = URL.createObjectURL(result.pdfBlob);
                 setPdfPreviewData({ 
                     blobUrl, 
@@ -230,7 +253,7 @@ const Reports: React.FC = () => {
         showToast('All application data has been reset.', 'success');
     };
     
-    const needsMonth = !['roll_statement'].includes(reportType);
+    const needsMonth = !['roll_statement', 'yearly_consumption'].includes(reportType);
 
     return (
         <>
@@ -310,6 +333,7 @@ const Reports: React.FC = () => {
                                 <option value="roll_statement">Roll Statement</option>
                                 <option value="daily_consumption">Daily Consumption Register</option>
                                 <option value="rice_requirement">Rice Requirement Certificate</option>
+                                <option value="yearly_consumption">Yearly Consumption Report</option>
                             </select>
                             <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">{reportDescriptions[reportType]}</p>
                         </div>
@@ -323,6 +347,21 @@ const Reports: React.FC = () => {
                                     onChange={(e) => setSelectedMonth(e.target.value)}
                                     className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg p-2.5 focus:ring-amber-500 focus:border-amber-500"
                                 />
+                            </div>
+                        )}
+                         {reportType === 'yearly_consumption' && (
+                             <div>
+                                <label htmlFor="year-select" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Select Financial Year</label>
+                                <select
+                                    id="year-select"
+                                    value={selectedFinancialYear}
+                                    onChange={(e) => setSelectedFinancialYear(e.target.value)}
+                                    className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg p-2.5 focus:ring-amber-500 focus:border-amber-500"
+                                >
+                                    {financialYearOptions.map(year => (
+                                        <option key={year} value={year}>{year}</option>
+                                    ))}
+                                </select>
                             </div>
                         )}
                         <Button onClick={initiateReportGeneration} className="w-full" disabled={isGenerating}>
