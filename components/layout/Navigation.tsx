@@ -1,9 +1,9 @@
 import React from 'react';
-// FIX: The 'Page' type is exported from 'types.ts', not 'App.tsx'. Correcting the import path.
+// FIX: The 'Page' type is exported from 'types.ts', not '../App'. Correcting the import path.
 import { Page } from '../../types';
 
 interface NavButtonProps {
-  // FIX: Changed JSX.Element to React.ReactElement to resolve "Cannot find namespace 'JSX'" error.
+  // FIX: Changed JSX.Element to React.ReactElement to resolve potential "Cannot find namespace 'JSX'" error.
   icon: React.ReactElement;
   label: string;
   isActive: boolean;

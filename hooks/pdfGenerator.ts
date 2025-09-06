@@ -236,7 +236,8 @@ const generateRollStatementPDF = (data: AppData): Blob => {
     sections.forEach(section => {
         const sectionClasses = (settings.classRolls || []).filter(cr => section.ids.includes(cr.id));
         if (sectionClasses.length > 0) {
-            body.push([{ content: section.title, colSpan: 8, styles: { fontStyle: 'bold', fillColor: [254, 243, 199] } }]);
+            // FIX: Cast cell object to 'any' to allow 'colSpan' property, resolving TypeScript error.
+            body.push([{ content: section.title, colSpan: 8, styles: { fontStyle: 'bold', fillColor: [254, 243, 199] } } as any]);
             
             sectionClasses.forEach(cr => {
                 const totalBoys = cr.general.boys + cr.stsc.boys;
@@ -356,8 +357,9 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
                     '-'
                 ]);
             } else {
+                 // FIX: Cast cell object to 'any' to allow 'colSpan' property, resolving TypeScript error.
                  body.push([
-                    { content: `${new Date(entry.date + 'T00:00:00').toLocaleDateString('en-IN')} - ${entry.reasonForNoMeal || 'No Meal Served'}`, colSpan: 11, styles: { halign: 'center', fontStyle: 'italic', textColor: [255, 0, 0] } }
+                    { content: `${new Date(entry.date + 'T00:00:00').toLocaleDateString('en-IN')} - ${entry.reasonForNoMeal || 'No Meal Served'}`, colSpan: 11, styles: { halign: 'center', fontStyle: 'italic', textColor: [255, 0, 0] } } as any
                 ]);
             }
         });
@@ -495,6 +497,16 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
     const doc = new jspdf.jsPDF('l', 'mm', 'a4'); // Landscape
     const { settings } = data;
     const { schoolDetails } = settings;
+    const categories: Category[] = ['balvatika', 'primary', 'middle'];
+
+    const onRollTotals: Record<Category, number> = { balvatika: 0, primary: 0, middle: 0 };
+    settings.classRolls.forEach(c => {
+        const classTotal = c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls;
+        if (['bal', 'pp1', 'pp2'].includes(c.id)) onRollTotals.balvatika += classTotal;
+        else if (['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)) onRollTotals.primary += classTotal;
+        else if (['c6', 'c7', 'c8'].includes(c.id)) onRollTotals.middle += classTotal;
+    });
+    const totalOnRoll = onRollTotals.balvatika + onRollTotals.primary + onRollTotals.middle;
 
     const [startYear, endYear] = financialYear.split('-').map(Number);
 
@@ -505,96 +517,144 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
 
     const head = [
         [
-            { content: 'Month', rowSpan: 2, styles: { valign: 'middle' } },
-            { content: 'Rice (in kg)', colSpan: 5, styles: { halign: 'center' } },
-            { content: 'Funds (in ₹)', colSpan: 5, styles: { halign: 'center' } },
+            // FIX: Cast cell object to 'any' to allow 'rowSpan' property, resolving TypeScript error.
+            { content: 'Month', rowSpan: 2, styles: { valign: 'middle' } } as any,
+            // FIX: Cast cell object to 'any' to allow 'rowSpan' property, resolving TypeScript error.
+            { content: 'Category', rowSpan: 2, styles: { valign: 'middle' } } as any,
+            // FIX: Cast cell object to 'any' to allow 'rowSpan' property, resolving TypeScript error.
+            { content: 'On Roll', rowSpan: 2, styles: { valign: 'middle' } } as any,
+            // FIX: Cast cell object to 'any' to allow 'rowSpan' property, resolving TypeScript error.
+            { content: 'Meals Served', rowSpan: 2, styles: { valign: 'middle' } } as any,
+            // FIX: Cast cell object to 'any' to allow 'colSpan' property, resolving TypeScript error.
+            { content: 'Rice (in kg)', colSpan: 4, styles: { halign: 'center' } } as any,
+            // FIX: Cast cell object to 'any' to allow 'colSpan' property, resolving TypeScript error.
+            { content: 'Funds (in ₹)', colSpan: 4, styles: { halign: 'center' } } as any,
         ],
         [
-            'Opening', 'Received', 'Total', 'Consumed', 'Closing',
-            'Opening', 'Received', 'Total', 'Expenditure', 'Closing',
+            'Opening', 'Received', 'Consumed', 'Closing',
+            'Opening', 'Received', 'Expenditure', 'Closing',
         ],
     ];
 
     const body: any[][] = [];
-    const totals = {
+    const grandTotals = {
+        mealsServed: 0,
         riceReceived: 0,
         riceConsumed: 0,
         cashReceived: 0,
         cashExpenditure: 0,
     };
     
-    let firstMonthOpeningRice = 0;
-    let firstMonthOpeningCash = 0;
-    let lastMonthClosingRice = 0;
-    let lastMonthClosingCash = 0;
+    let yearlyOpeningRice = 0;
+    let yearlyOpeningCash = 0;
+    let yearlyClosingRice = 0;
+    let yearlyClosingCash = 0;
 
-    // Loop from April to March of the financial year
     for (let i = 0; i < 12; i++) {
-        const monthIndex = (3 + i) % 12; // April is month 3 (0-indexed)
+        const monthIndex = (3 + i) % 12;
         const year = monthIndex < 3 ? endYear : startYear;
         const monthKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
-        
         const monthDate = new Date(year, monthIndex, 1);
-        const monthName = monthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-        
+        const monthName = monthDate.toLocaleString('default', { month: 'long' });
+
         const summary = calculateMonthlySummary(data, monthKey);
         
-        // Aggregate totals for rice
-        const riceOpening = summary.riceAbstracts.balvatika.opening + summary.riceAbstracts.primary.opening + summary.riceAbstracts.middle.opening;
-        const riceReceived = summary.riceAbstracts.balvatika.received + summary.riceAbstracts.primary.received + summary.riceAbstracts.middle.received;
-        const riceConsumed = summary.riceAbstracts.balvatika.consumed + summary.riceAbstracts.primary.consumed + summary.riceAbstracts.middle.consumed;
-        const riceClosing = summary.riceAbstracts.balvatika.balance + summary.riceAbstracts.primary.balance + summary.riceAbstracts.middle.balance;
+        const monthTotals = {
+            onRoll: 0, mealsServed: 0,
+            riceOpening: 0, riceReceived: 0, riceConsumed: 0, riceClosing: 0,
+            cashOpening: 0, cashReceived: 0, cashExpenditure: 0, cashClosing: 0,
+        };
+
+        categories.forEach((cat, catIndex) => {
+            const onRoll = onRollTotals[cat];
+            const mealsServed = summary.categoryTotals.present[cat];
+            const rice = summary.riceAbstracts[cat];
+            const cash = summary.cashAbstracts[cat];
+
+            const rowData = [
+                cat.charAt(0).toUpperCase() + cat.slice(1),
+                onRoll,
+                mealsServed,
+                rice.opening.toFixed(3),
+                rice.received.toFixed(3),
+                rice.consumed.toFixed(3),
+                { content: rice.balance.toFixed(3), styles: { fontStyle: 'bold' } },
+                cash.opening.toFixed(2),
+                cash.received.toFixed(2),
+                cash.expenditure.toFixed(2),
+                { content: cash.balance.toFixed(2), styles: { fontStyle: 'bold' } },
+            ];
+
+            if (catIndex === 0) {
+                // FIX: Cast cell object to 'any' to allow 'rowSpan' property, resolving TypeScript error.
+                rowData.unshift({ content: monthName, rowSpan: 4 } as any);
+            }
+
+            body.push(rowData);
+            
+            // Accumulate month totals
+            monthTotals.onRoll += onRoll;
+            monthTotals.mealsServed += mealsServed;
+            monthTotals.riceOpening += rice.opening;
+            monthTotals.riceReceived += rice.received;
+            monthTotals.riceConsumed += rice.consumed;
+            monthTotals.riceClosing += rice.balance;
+            monthTotals.cashOpening += cash.opening;
+            monthTotals.cashReceived += cash.received;
+            monthTotals.cashExpenditure += cash.expenditure;
+            monthTotals.cashClosing += cash.balance;
+        });
         
-        // Aggregate totals for cash
-        const cashOpening = summary.cashAbstracts.balvatika.opening + summary.cashAbstracts.primary.opening + summary.cashAbstracts.middle.opening;
-        const cashReceived = summary.cashAbstracts.balvatika.received + summary.cashAbstracts.primary.received + summary.cashAbstracts.middle.received;
-        const cashExpenditure = summary.cashAbstracts.balvatika.expenditure + summary.cashAbstracts.primary.expenditure + summary.cashAbstracts.middle.expenditure;
-        const cashClosing = summary.cashAbstracts.balvatika.balance + summary.cashAbstracts.primary.balance + summary.cashAbstracts.middle.balance;
-
-        if (i === 0) { // April
-            firstMonthOpeningRice = riceOpening;
-            firstMonthOpeningCash = cashOpening;
-        }
-        if (i === 11) { // March
-            lastMonthClosingRice = riceClosing;
-            lastMonthClosingCash = cashClosing;
-        }
-
-        totals.riceReceived += riceReceived;
-        totals.riceConsumed += riceConsumed;
-        totals.cashReceived += cashReceived;
-        totals.cashExpenditure += cashExpenditure;
-
+        // Add month total row
         body.push([
-            monthName,
-            riceOpening.toFixed(3),
-            riceReceived.toFixed(3),
-            (riceOpening + riceReceived).toFixed(3),
-            riceConsumed.toFixed(3),
-            { content: riceClosing.toFixed(3), styles: { fontStyle: 'bold' } },
-            cashOpening.toFixed(2),
-            cashReceived.toFixed(2),
-            (cashOpening + cashReceived).toFixed(2),
-            cashExpenditure.toFixed(2),
-            { content: cashClosing.toFixed(2), styles: { fontStyle: 'bold' } },
+            // Month cell is spanned
+            { content: 'Total', styles: { fontStyle: 'bold' } },
+            { content: monthTotals.onRoll, styles: { fontStyle: 'bold' } },
+            { content: monthTotals.mealsServed, styles: { fontStyle: 'bold' } },
+            { content: monthTotals.riceOpening.toFixed(3), styles: { fontStyle: 'bold' } },
+            { content: monthTotals.riceReceived.toFixed(3), styles: { fontStyle: 'bold' } },
+            { content: monthTotals.riceConsumed.toFixed(3), styles: { fontStyle: 'bold' } },
+            { content: monthTotals.riceClosing.toFixed(3), styles: { fontStyle: 'bold' } },
+            { content: monthTotals.cashOpening.toFixed(2), styles: { fontStyle: 'bold' } },
+            { content: monthTotals.cashReceived.toFixed(2), styles: { fontStyle: 'bold' } },
+            { content: monthTotals.cashExpenditure.toFixed(2), styles: { fontStyle: 'bold' } },
+            { content: monthTotals.cashClosing.toFixed(2), styles: { fontStyle: 'bold' } },
         ]);
+
+        // Capture opening balance for the year from the first month (April)
+        if (i === 0) {
+            yearlyOpeningRice = monthTotals.riceOpening;
+            yearlyOpeningCash = monthTotals.cashOpening;
+        }
+
+        // Capture closing balance for the year from the last month (March)
+        if (i === 11) {
+            yearlyClosingRice = monthTotals.riceClosing;
+            yearlyClosingCash = monthTotals.cashClosing;
+        }
+
+        // Accumulate grand totals
+        grandTotals.mealsServed += monthTotals.mealsServed;
+        grandTotals.riceReceived += monthTotals.riceReceived;
+        grandTotals.riceConsumed += monthTotals.riceConsumed;
+        grandTotals.cashReceived += monthTotals.cashReceived;
+        grandTotals.cashExpenditure += monthTotals.cashExpenditure;
     }
 
-    const foot = [
-        [
-            'Grand Total',
-            firstMonthOpeningRice.toFixed(3),
-            totals.riceReceived.toFixed(3),
-            (firstMonthOpeningRice + totals.riceReceived).toFixed(3),
-            totals.riceConsumed.toFixed(3),
-            lastMonthClosingRice.toFixed(3),
-            firstMonthOpeningCash.toFixed(2),
-            totals.cashReceived.toFixed(2),
-            (firstMonthOpeningCash + totals.cashReceived).toFixed(2),
-            totals.cashExpenditure.toFixed(2),
-            lastMonthClosingCash.toFixed(2),
-        ]
-    ];
+    const foot = [[
+        // FIX: Cast cell object to 'any' to allow 'colSpan' property, resolving TypeScript error.
+        { content: 'Grand Total', colSpan: 2, styles: { halign: 'center' } } as any,
+        totalOnRoll,
+        grandTotals.mealsServed,
+        yearlyOpeningRice.toFixed(3),
+        grandTotals.riceReceived.toFixed(3),
+        grandTotals.riceConsumed.toFixed(3),
+        yearlyClosingRice.toFixed(3),
+        yearlyOpeningCash.toFixed(2),
+        grandTotals.cashReceived.toFixed(2),
+        grandTotals.cashExpenditure.toFixed(2),
+        yearlyClosingCash.toFixed(2),
+    ]];
 
     doc.autoTable({
         startY: 30,
@@ -603,15 +663,25 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
         foot: foot,
         theme: 'grid',
         styles: { fontSize: 8, cellPadding: 1.5, halign: 'right' },
-        headStyles: { fillColor: [245, 158, 11], halign: 'center' },
-        footStyles: { fillColor: [252, 211, 77], fontStyle: 'bold' },
-        columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
+        headStyles: { fillColor: [245, 158, 11], halign: 'center', fontSize: 8 },
+        footStyles: { fillColor: [252, 211, 77], fontStyle: 'bold', fontSize: 8 },
+        columnStyles: { 
+            0: { halign: 'left', fontStyle: 'bold' },
+            1: { halign: 'left' } 
+        },
+        didDrawCell: (data: any) => {
+            // Style month total rows
+            if (data.section === 'body' && (data.row.index + 1) % 4 === 0) {
+                doc.setFillColor(254, 243, 199); // light yellow
+            }
+        }
     });
     
     addSignatureBlock(doc, settings, doc.lastAutoTable.finalY);
 
     return doc.output('blob');
 };
+
 
 export const generatePDFReport = (reportType: string, data: AppData, parameter: string): { pdfBlob: Blob; filename: string } => {
     const schoolName = (data.settings.schoolDetails.name || 'School').replace(/[\\/:"*?<>|.\s]+/g, '_');
