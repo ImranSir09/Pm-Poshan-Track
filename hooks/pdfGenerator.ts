@@ -641,37 +641,35 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
         grandTotals.cashExpenditure += monthTotals.cashExpenditure;
     }
 
-    const foot = [[
-        // FIX: Cast cell object to 'any' to allow 'colSpan' property, resolving TypeScript error.
-        { content: 'Grand Total', colSpan: 2, styles: { halign: 'center' } } as any,
-        totalOnRoll,
-        grandTotals.mealsServed,
-        yearlyOpeningRice.toFixed(3),
-        grandTotals.riceReceived.toFixed(3),
-        grandTotals.riceConsumed.toFixed(3),
-        yearlyClosingRice.toFixed(3),
-        yearlyOpeningCash.toFixed(2),
-        grandTotals.cashReceived.toFixed(2),
-        grandTotals.cashExpenditure.toFixed(2),
-        yearlyClosingCash.toFixed(2),
-    ]];
+    const grandTotalRow = [
+        { content: 'Grand Total', colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', fillColor: [252, 211, 77] } },
+        { content: totalOnRoll, styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } },
+        { content: grandTotals.mealsServed, styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } },
+        { content: yearlyOpeningRice.toFixed(3), styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } },
+        { content: grandTotals.riceReceived.toFixed(3), styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } },
+        { content: grandTotals.riceConsumed.toFixed(3), styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } },
+        { content: yearlyClosingRice.toFixed(3), styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } },
+        { content: yearlyOpeningCash.toFixed(2), styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } },
+        { content: grandTotals.cashReceived.toFixed(2), styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } },
+        { content: grandTotals.cashExpenditure.toFixed(2), styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } },
+        { content: yearlyClosingCash.toFixed(2), styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } },
+    ];
+    body.push(grandTotalRow);
 
     doc.autoTable({
         startY: 30,
         head: head,
         body: body,
-        foot: foot,
         theme: 'grid',
         styles: { fontSize: 8, cellPadding: 1.5, halign: 'right' },
         headStyles: { fillColor: [245, 158, 11], halign: 'center', fontSize: 8 },
-        footStyles: { fillColor: [252, 211, 77], fontStyle: 'bold', fontSize: 8 },
         columnStyles: { 
             0: { halign: 'left', fontStyle: 'bold' },
             1: { halign: 'left' } 
         },
         didDrawCell: (data: any) => {
-            // Style month total rows
-            if (data.section === 'body' && (data.row.index + 1) % 4 === 0) {
+            // Style month total rows, but not the last row (Grand Total)
+            if (data.section === 'body' && (data.row.index + 1) % 4 === 0 && data.row.index < body.length - 1) {
                 doc.setFillColor(254, 243, 199); // light yellow
             }
         }
