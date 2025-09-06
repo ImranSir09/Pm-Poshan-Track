@@ -528,7 +528,7 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
             // FIX: Cast cell object to 'any' to allow 'colSpan' property, resolving TypeScript error.
             { content: 'Rice (in kg)', colSpan: 4, styles: { halign: 'center' } } as any,
             // FIX: Cast cell object to 'any' to allow 'colSpan' property, resolving TypeScript error.
-            { content: 'Funds (in ₹)', colSpan: 4, styles: { halign: 'center' } } as any,
+            { content: 'Funds (in Rs)', colSpan: 4, styles: { halign: 'center' } } as any,
         ],
         [
             'Opening', 'Received', 'Consumed', 'Closing',
