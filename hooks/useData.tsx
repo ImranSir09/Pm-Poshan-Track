@@ -30,33 +30,44 @@ const deepMerge = (target: any, source: any): any => {
 
 
 const getInitialData = (): AppData => {
+    const defaultData: AppData = {
+        auth: { username: '', securityQuestion: '', securityAnswer: '' },
+        settings: DEFAULT_SETTINGS,
+        entries: [],
+        receipts: [],
+        monthlyBalances: {},
+        lastBackupDate: undefined,
+        welcomeScreenShown: false,
+    };
+
     try {
         const savedData = localStorage.getItem(APP_DATA_KEY);
         if (savedData) {
-            const parsedData = JSON.parse(savedData) as AppData;
-            
-            // Backward compatibility/migration for settings
-            const mergedSettings = deepMerge(DEFAULT_SETTINGS, parsedData.settings);
-            parsedData.settings = mergedSettings;
+            const parsedData = JSON.parse(savedData) as Partial<AppData>;
 
-            if (!parsedData.auth) {
-                parsedData.auth = { username: '', securityQuestion: '', securityAnswer: '' };
-            }
+            // Create a new data object by merging loaded data over the default structure.
+            // This ensures all top-level keys exist and prevents crashes from undefined properties.
+            let dataToProcess: AppData = {
+                ...defaultData,
+                ...parsedData,
+                auth: { ...defaultData.auth, ...(parsedData.auth || {}) },
+                settings: deepMerge(DEFAULT_SETTINGS, parsedData.settings || {}),
+            };
 
             // MIGRATION: Convert old inspection report object to new string format
-            if (parsedData.settings?.inspectionReport?.inspectedBy && isObject(parsedData.settings.inspectionReport.inspectedBy)) {
-                const oldInspectedBy = parsedData.settings.inspectionReport.inspectedBy as any;
+            if (dataToProcess.settings?.inspectionReport?.inspectedBy && isObject(dataToProcess.settings.inspectionReport.inspectedBy)) {
+                const oldInspectedBy = dataToProcess.settings.inspectionReport.inspectedBy as any;
                 let newInspectedBy: InspectionAuthority = '';
                 if (oldInspectedBy.taskForce) newInspectedBy = 'Task Force';
                 else if (oldInspectedBy.districtOfficials) newInspectedBy = 'District Officials';
                 else if (oldInspectedBy.blockOfficials) newInspectedBy = 'Block Officials';
                 else if (oldInspectedBy.smcMembers) newInspectedBy = 'SMC Members';
-                parsedData.settings.inspectionReport.inspectedBy = newInspectedBy;
+                dataToProcess.settings.inspectionReport.inspectedBy = newInspectedBy;
             }
 
             // MIGRATION: Convert old scalar receipts to new category-wise structure
-            if (parsedData.receipts && parsedData.receipts.length > 0 && typeof (parsedData.receipts[0] as any).rice === 'number') {
-                parsedData.receipts = parsedData.receipts.map((receipt: any) => ({
+            if (dataToProcess.receipts && dataToProcess.receipts.length > 0 && typeof (dataToProcess.receipts[0] as any).rice === 'number') {
+                dataToProcess.receipts = dataToProcess.receipts.map((receipt: any) => ({
                     ...receipt,
                     rice: { balvatika: 0, primary: receipt.rice, middle: 0 },
                     cash: { balvatika: 0, primary: receipt.cash, middle: 0 },
@@ -64,10 +75,10 @@ const getInitialData = (): AppData => {
             }
 
             // MIGRATION: Convert old scalar monthly balances to new category-wise structure
-            if(parsedData.monthlyBalances) {
+            if(dataToProcess.monthlyBalances) {
                 const migratedBalances: MonthlyBalance = {};
-                Object.keys(parsedData.monthlyBalances).forEach(key => {
-                    const balance = (parsedData.monthlyBalances as any)[key];
+                Object.keys(dataToProcess.monthlyBalances).forEach(key => {
+                    const balance = (dataToProcess.monthlyBalances as any)[key];
                     if (balance && typeof balance.rice === 'number') {
                         migratedBalances[key] = {
                             rice: { balvatika: 0, primary: balance.rice, middle: 0 },
@@ -77,27 +88,24 @@ const getInitialData = (): AppData => {
                         migratedBalances[key] = balance;
                     }
                 });
-                parsedData.monthlyBalances = migratedBalances;
+                dataToProcess.monthlyBalances = migratedBalances;
             }
             
             // Migration for welcome screen: if user exists but flag is missing, assume they don've need to see it.
-            if (parsedData.auth?.password && typeof parsedData.welcomeScreenShown === 'undefined') {
-                parsedData.welcomeScreenShown = true;
+            if (dataToProcess.auth?.password && typeof dataToProcess.welcomeScreenShown === 'undefined') {
+                dataToProcess.welcomeScreenShown = true;
+            }
+             // Ensure welcomeScreenShown has a boolean value
+            if (typeof dataToProcess.welcomeScreenShown !== 'boolean') {
+                dataToProcess.welcomeScreenShown = !!dataToProcess.auth?.password;
             }
 
-            return parsedData;
+            return dataToProcess;
         }
     } catch (error) {
         console.error("Failed to parse data from localStorage", error);
     }
-    return {
-        auth: { username: '', securityQuestion: '', securityAnswer: '' },
-        settings: DEFAULT_SETTINGS,
-        entries: [],
-        receipts: [],
-        monthlyBalances: {},
-        lastBackupDate: undefined,
-    };
+    return defaultData;
 };
 
 

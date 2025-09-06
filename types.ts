@@ -1,7 +1,5 @@
 
-import { Page } from './App';
-
-export { Page };
+export type Page = 'dashboard' | 'summary' | 'receipts' | 'settings' | 'reports';
 
 export interface Notification {
   id: string; // e.g., 'low-stock', 'backup-reminder'

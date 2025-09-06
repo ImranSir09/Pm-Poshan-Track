@@ -15,8 +15,7 @@ import ToastContainer from './components/ui/ToastContainer';
 import LoginPage from './components/pages/LoginPage';
 import SetupPage from './components/pages/SetupPage';
 import WelcomePage from './components/pages/WelcomePage';
-
-export type Page = 'dashboard' | 'summary' | 'receipts' | 'settings' | 'reports';
+import { Page } from './types';
 
 const App: React.FC = () => {
     return (
