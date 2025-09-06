@@ -1,5 +1,5 @@
 import { AppData, Category, ClassRoll } from '../types';
-import { calculateMonthlySummary } from '../services/summaryCalculator';
+import { calculateMonthlySummary, getOpeningBalanceInfo } from '../services/summaryCalculator';
 
 interface jsPDF {
     autoTable: (options: any) => jsPDF;
@@ -284,7 +284,7 @@ const generateRollStatementPDF = (data: AppData): Blob => {
 };
 
 const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob => {
-    const doc = new jspdf.jsPDF('l', 'mm', 'a4');
+    const doc = new jspdf.jsPDF();
     const { settings } = data;
     const { schoolDetails, rates } = settings;
     const summaryData = calculateMonthlySummary(data, selectedMonth);
@@ -378,7 +378,7 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
         const mainTableFinalY = doc.lastAutoTable.finalY;
         let abstractStartY = mainTableFinalY + 5;
         
-        if (abstractStartY > doc.internal.pageSize.getHeight() - 50) {
+        if (abstractStartY > doc.internal.pageSize.getHeight() - 60) {
             doc.addPage();
             abstractStartY = 20;
         }
@@ -387,8 +387,11 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
         const cashCatAbstract = cashAbstracts[category];
         
         const pageWidth = doc.internal.pageSize.getWidth();
-        const tableWidth = (pageWidth / 2) - 18;
-        
+        const margin = 14;
+        const gap = 4;
+        const tableWidth = (pageWidth - (margin * 2) - gap) / 2;
+
+        // Rice Abstract Table (Left)
         doc.autoTable({
             startY: abstractStartY,
             head: [['Rice Abstract (kg)', 'Amount']],
@@ -401,12 +404,15 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
             ],
             theme: 'grid',
             tableWidth: tableWidth,
-            margin: { left: 14 },
+            margin: { left: margin },
             styles: { fontSize: 8, cellPadding: 1.5, halign: 'right' },
             headStyles: { halign: 'center', fillColor: [254, 249, 195] },
             columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
         });
 
+        const riceTableFinalY = doc.lastAutoTable.finalY;
+
+        // Cash Abstract Table (Right)
         doc.autoTable({
             startY: abstractStartY,
             head: [['Cash Abstract (Rs)', 'Amount']],
@@ -419,13 +425,14 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
             ],
             theme: 'grid',
             tableWidth: tableWidth,
-            margin: { left: pageWidth / 2 + 4 },
+            margin: { left: margin + tableWidth + gap },
             styles: { fontSize: 8, cellPadding: 1.5, halign: 'right' },
             headStyles: { halign: 'center', fillColor: [254, 249, 195] },
             columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
         });
         
-        const abstractTablesFinalY = doc.lastAutoTable.finalY;
+        const cashTableFinalY = doc.lastAutoTable.finalY;
+        const abstractTablesFinalY = Math.max(riceTableFinalY, cashTableFinalY);
         addSignatureBlock(doc, settings, abstractTablesFinalY);
     });
     
@@ -486,185 +493,154 @@ const generateRiceRequirementPDF = (data: AppData, selectedMonth: string): Blob 
 
 const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: string): Blob => {
     const doc = new jspdf.jsPDF('l', 'mm', 'a4'); // Landscape
-    const { settings, receipts } = data;
+    const { settings } = data;
     const { schoolDetails } = settings;
 
     const [startYear, endYear] = financialYear.split('-').map(Number);
 
     doc.setFontSize(14).setFont(undefined, 'bold');
-    doc.text(schoolDetails.name.toUpperCase(), doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' });
+    doc.text(schoolDetails.name.toUpperCase(), doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
     doc.setFontSize(11).setFont(undefined, 'normal');
-    doc.text(`Detailed Yearly Consumption & Fund Report for Financial Year ${financialYear}`, doc.internal.pageSize.getWidth() / 2, 18, { align: 'center' });
+    doc.text(`Yearly Detailed Consumption Report for Financial Year ${financialYear}`, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
 
-    const formatNum = (num: number, decimals: number) => num.toFixed(decimals);
+    const head = [
+        [
+            { content: 'Month', rowSpan: 2, styles: { valign: 'middle' } },
+            { content: 'Rice (in kg)', colSpan: 5, styles: { halign: 'center' } },
+            { content: 'Funds (in ₹)', colSpan: 5, styles: { halign: 'center' } },
+        ],
+        [
+            'Opening', 'Received', 'Total', 'Consumed', 'Closing',
+            'Opening', 'Received', 'Total', 'Expenditure', 'Closing',
+        ],
+    ];
 
-    const head = [[
-        { content: 'Month-Year', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
-        { content: 'Category', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
-        { content: 'Meal\nDays', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
-        { content: 'Students\nFed', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
-        { content: 'Rice (kg)', colSpan: 3, styles: { halign: 'center' } },
-        { content: 'Cash (₹)', colSpan: 3, styles: { halign: 'center' } },
-    ], [
-        'Received', 'Used', 'Balance',
-        'Received', 'Used', 'Balance',
-    ]];
-    
     const body: any[][] = [];
-    const grandTotals = { mealDays: 0, present: 0, riceRcvd: 0, riceUsed: 0, cashRcvd: 0, cashUsed: 0 };
-    const categories: Category[] = ['balvatika', 'primary', 'middle'];
+    const totals = {
+        riceReceived: 0,
+        riceConsumed: 0,
+        cashReceived: 0,
+        cashExpenditure: 0,
+    };
     
+    let firstMonthOpeningRice = 0;
+    let firstMonthOpeningCash = 0;
+    let lastMonthClosingRice = 0;
+    let lastMonthClosingCash = 0;
+
+    // Loop from April to March of the financial year
     for (let i = 0; i < 12; i++) {
-        const month = (i + 3) % 12 + 1; // April is month 4
-        const year = i < 9 ? startYear : endYear;
-        const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+        const monthIndex = (3 + i) % 12; // April is month 3 (0-indexed)
+        const year = monthIndex < 3 ? endYear : startYear;
+        const monthKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+        
+        const monthDate = new Date(year, monthIndex, 1);
+        const monthName = monthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
         
         const summary = calculateMonthlySummary(data, monthKey);
-        const monthName = new Date(year, month - 1, 1).toLocaleString('default', { month: 'short', year: 'numeric' });
-
-        const receiptsForThisMonth = receipts
-            .filter(r => r.date.startsWith(monthKey))
-            .reduce((acc, r) => {
-                categories.forEach(cat => {
-                    acc.rice[cat] += r.rice[cat];
-                    acc.cash[cat] += r.cash[cat];
-                });
-                return acc;
-            }, {
-                rice: { balvatika: 0, primary: 0, middle: 0 },
-                cash: { balvatika: 0, primary: 0, middle: 0 },
-            });
-
-        const monthTotals = { present: 0, riceRcvd: 0, riceUsed: 0, cashRcvd: 0, cashUsed: 0 };
         
-        categories.forEach((cat, catIndex) => {
-            const mealDays = summary.monthEntries.filter(e => e.present[cat] > 0).length;
-            const present = summary.categoryTotals.present[cat];
-            const riceRcvd = receiptsForThisMonth.rice[cat];
-            const riceUsed = summary.categoryTotals.rice[cat];
-            const riceBal = summary.closingBalance.rice[cat];
-            const cashRcvd = receiptsForThisMonth.cash[cat];
-            const cashUsed = summary.categoryTotals.expenditure[cat];
-            const cashBal = summary.closingBalance.cash[cat];
-
-            monthTotals.present += present;
-            monthTotals.riceRcvd += riceRcvd;
-            monthTotals.riceUsed += riceUsed;
-            monthTotals.cashRcvd += cashRcvd;
-            monthTotals.cashUsed += cashUsed;
-            
-            const rowContent = [
-                cat.charAt(0).toUpperCase() + cat.slice(1),
-                mealDays, present,
-                formatNum(riceRcvd, 3), formatNum(riceUsed, 3), formatNum(riceBal, 3),
-                formatNum(cashRcvd, 2), formatNum(cashUsed, 2), formatNum(cashBal, 2),
-            ];
-
-            if (catIndex === 0) {
-                 body.push([
-                    { content: monthName, rowSpan: 3, styles: { valign: 'middle', halign: 'center' } },
-                    ...rowContent
-                ]);
-            } else {
-                body.push(rowContent);
-            }
-        });
+        // Aggregate totals for rice
+        const riceOpening = summary.riceAbstracts.balvatika.opening + summary.riceAbstracts.primary.opening + summary.riceAbstracts.middle.opening;
+        const riceReceived = summary.riceAbstracts.balvatika.received + summary.riceAbstracts.primary.received + summary.riceAbstracts.middle.received;
+        const riceConsumed = summary.riceAbstracts.balvatika.consumed + summary.riceAbstracts.primary.consumed + summary.riceAbstracts.middle.consumed;
+        const riceClosing = summary.riceAbstracts.balvatika.balance + summary.riceAbstracts.primary.balance + summary.riceAbstracts.middle.balance;
         
-        const totalMonthMealDays = summary.monthEntries.filter(e => e.totalPresent > 0).length;
+        // Aggregate totals for cash
+        const cashOpening = summary.cashAbstracts.balvatika.opening + summary.cashAbstracts.primary.opening + summary.cashAbstracts.middle.opening;
+        const cashReceived = summary.cashAbstracts.balvatika.received + summary.cashAbstracts.primary.received + summary.cashAbstracts.middle.received;
+        const cashExpenditure = summary.cashAbstracts.balvatika.expenditure + summary.cashAbstracts.primary.expenditure + summary.cashAbstracts.middle.expenditure;
+        const cashClosing = summary.cashAbstracts.balvatika.balance + summary.cashAbstracts.primary.balance + summary.cashAbstracts.middle.balance;
 
-        grandTotals.mealDays += totalMonthMealDays; // Note: This could over-count if categories have different meal days. A distinct count of dates might be better. For now, using the overall count.
-        grandTotals.present += monthTotals.present;
-        grandTotals.riceRcvd += monthTotals.riceRcvd;
-        grandTotals.riceUsed += monthTotals.riceUsed;
-        grandTotals.cashRcvd += monthTotals.cashRcvd;
-        grandTotals.cashUsed += monthTotals.cashUsed;
-    }
-    
-    const finalMonthKey = `${endYear}-03`;
-    const finalSummary = calculateMonthlySummary(data, finalMonthKey);
-    const finalRiceBalance = finalSummary.closingBalance.rice.balvatika + finalSummary.closingBalance.rice.primary + finalSummary.closingBalance.rice.middle;
-    const finalCashBalance = finalSummary.closingBalance.cash.balvatika + finalSummary.closingBalance.cash.primary + finalSummary.closingBalance.cash.middle;
-    
-    // Calculate total meal days based on unique days across the year for accuracy
-    const allMealDays = new Set<string>();
-    for (let i = 0; i < 12; i++) {
-        const month = (i + 3) % 12 + 1;
-        const year = i < 9 ? startYear : endYear;
-        const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-        data.entries
-            .filter(e => e.date.startsWith(monthKey) && e.totalPresent > 0)
-            .forEach(e => allMealDays.add(e.id));
+        if (i === 0) { // April
+            firstMonthOpeningRice = riceOpening;
+            firstMonthOpeningCash = cashOpening;
+        }
+        if (i === 11) { // March
+            lastMonthClosingRice = riceClosing;
+            lastMonthClosingCash = cashClosing;
+        }
+
+        totals.riceReceived += riceReceived;
+        totals.riceConsumed += riceConsumed;
+        totals.cashReceived += cashReceived;
+        totals.cashExpenditure += cashExpenditure;
+
+        body.push([
+            monthName,
+            riceOpening.toFixed(3),
+            riceReceived.toFixed(3),
+            (riceOpening + riceReceived).toFixed(3),
+            riceConsumed.toFixed(3),
+            { content: riceClosing.toFixed(3), styles: { fontStyle: 'bold' } },
+            cashOpening.toFixed(2),
+            cashReceived.toFixed(2),
+            (cashOpening + cashReceived).toFixed(2),
+            cashExpenditure.toFixed(2),
+            { content: cashClosing.toFixed(2), styles: { fontStyle: 'bold' } },
+        ]);
     }
 
-
-    const foot = [[
-        { content: 'Grand Total', colSpan: 2, styles: { halign: 'right' } },
-        allMealDays.size, grandTotals.present,
-        formatNum(grandTotals.riceRcvd, 3), formatNum(grandTotals.riceUsed, 3), formatNum(finalRiceBalance, 3),
-        formatNum(grandTotals.cashRcvd, 2), formatNum(grandTotals.cashUsed, 2), formatNum(finalCashBalance, 2),
-    ]];
+    const foot = [
+        [
+            'Grand Total',
+            firstMonthOpeningRice.toFixed(3),
+            totals.riceReceived.toFixed(3),
+            (firstMonthOpeningRice + totals.riceReceived).toFixed(3),
+            totals.riceConsumed.toFixed(3),
+            lastMonthClosingRice.toFixed(3),
+            firstMonthOpeningCash.toFixed(2),
+            totals.cashReceived.toFixed(2),
+            (firstMonthOpeningCash + totals.cashReceived).toFixed(2),
+            totals.cashExpenditure.toFixed(2),
+            lastMonthClosingCash.toFixed(2),
+        ]
+    ];
 
     doc.autoTable({
-        startY: 22, head, body, foot, theme: 'grid',
-        styles: { fontSize: 7, cellPadding: 1, halign: 'right' },
+        startY: 30,
+        head: head,
+        body: body,
+        foot: foot,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 1.5, halign: 'right' },
         headStyles: { fillColor: [245, 158, 11], halign: 'center' },
         footStyles: { fillColor: [252, 211, 77], fontStyle: 'bold' },
-        columnStyles: { 0: { halign: 'left' }, 1: { halign: 'left' } },
+        columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
     });
     
-    const finalY = doc.lastAutoTable.finalY;
-    const pageHeight = doc.internal.pageSize.getHeight();
-    let certificateY = finalY + 15;
-    if (certificateY > pageHeight - 40) {
-        doc.addPage();
-        certificateY = 20;
-    }
+    addSignatureBlock(doc, settings, doc.lastAutoTable.finalY);
 
-    doc.setFontSize(10).setFont(undefined, 'normal');
-    const certificateText = `This is to certify that the information provided in this report for the financial year ${financialYear} is true and correct to the best of my knowledge, based on the records maintained at the school.`;
-    doc.text(certificateText, 14, certificateY, { maxWidth: doc.internal.pageSize.getWidth() - 28, align: 'justify' });
-
-    addSignatureBlock(doc, settings, certificateY + 10);
     return doc.output('blob');
 };
 
-export const generatePDFReport = (
-    reportType: string,
-    data: AppData,
-    monthOrYear: string
-): { pdfBlob: Blob; filename: string } => {
-    
-    let pdfBlob: Blob;
-    let filename: string;
-
+export const generatePDFReport = (reportType: string, data: AppData, parameter: string): { pdfBlob: Blob; filename: string } => {
     const schoolName = (data.settings.schoolDetails.name || 'School').replace(/[\\/:"*?<>|.\s]+/g, '_');
-    const period = monthOrYear.includes('-') && !['yearly_consumption_detailed'].includes(reportType) 
-        ? new Date(`${monthOrYear}-02`).toLocaleString('default', { month: 'short', year: 'numeric' }).replace(' ', '-')
-        : monthOrYear;
+    let pdfBlob: Blob;
+    let filename = `${schoolName}_Report.pdf`;
 
     switch (reportType) {
         case 'mdcf':
-            pdfBlob = generateMDCF(data, monthOrYear);
-            filename = `MDCF_${schoolName}_${period}.pdf`;
+            pdfBlob = generateMDCF(data, parameter);
+            filename = `${schoolName}_MDCF_${parameter}.pdf`;
             break;
         case 'roll_statement':
             pdfBlob = generateRollStatementPDF(data);
-            filename = `Roll_Statement_${schoolName}.pdf`;
+            filename = `${schoolName}_Roll_Statement.pdf`;
             break;
         case 'daily_consumption':
-            pdfBlob = generateDailyConsumptionPDF(data, monthOrYear);
-            filename = `Daily_Consumption_${schoolName}_${period}.pdf`;
+            pdfBlob = generateDailyConsumptionPDF(data, parameter);
+            filename = `${schoolName}_Daily_Consumption_${parameter}.pdf`;
             break;
         case 'rice_requirement':
-            pdfBlob = generateRiceRequirementPDF(data, monthOrYear);
-            filename = `Rice_Requirement_${schoolName}_${period}.pdf`;
+            pdfBlob = generateRiceRequirementPDF(data, parameter);
+            filename = `${schoolName}_Rice_Requirement_${parameter}.pdf`;
             break;
         case 'yearly_consumption_detailed':
-            pdfBlob = generateYearlyConsumptionDetailedPDF(data, monthOrYear);
-            filename = `Yearly_Report_Detailed_${schoolName}_${period}.pdf`;
+            pdfBlob = generateYearlyConsumptionDetailedPDF(data, parameter);
+            filename = `${schoolName}_Yearly_Consumption_${parameter.replace('-', '_')}.pdf`;
             break;
         default:
-            throw new Error(`Unknown report type: ${reportType}`);
+            throw new Error('Invalid report type selected.');
     }
 
     return { pdfBlob, filename };
