@@ -60,11 +60,23 @@ const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({ isOpen, onClose, pdfU
                 </div>
             </div>
             <div className="flex-grow bg-gray-700 rounded-lg overflow-hidden">
-                <iframe
-                    src={pdfUrl}
-                    title="PDF Preview"
-                    className="w-full h-full border-0"
-                />
+                <object
+                    data={pdfUrl}
+                    type="application/pdf"
+                    className="w-full h-full"
+                    aria-label="PDF Preview"
+                >
+                    <div className="flex flex-col items-center justify-center h-full text-white p-4 text-center">
+                        <p className="mb-4 text-lg">PDF preview is not available in your browser.</p>
+                        <p className="text-sm mb-4">Please download the file to view it.</p>
+                        <Button onClick={handleDownload}>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                            Download PDF
+                        </Button>
+                    </div>
+                </object>
             </div>
         </div>
     );
