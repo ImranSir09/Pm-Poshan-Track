@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -7,7 +6,7 @@ import { useToast } from '../../hooks/useToast';
 import Modal from '../ui/Modal';
 import { Category } from '../../types';
 import PDFPreviewModal from '../ui/PDFPreviewModal';
-import { generatePDFReport } from '../../hooks/pdfGenerator';
+import { generatePDFReport } from '../../services/pdfGenerator';
 import { calculateMonthlySummary } from '../../services/summaryCalculator';
 import DataManagement from '../ui/DataManagement';
 
