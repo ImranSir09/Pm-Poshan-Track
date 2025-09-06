@@ -17,12 +17,6 @@ const Dashboard: React.FC = () => {
     const { mdmIncharge } = settings;
 
     const [isLoading, setIsLoading] = useState(true);
-    const [dashboardData, setDashboardData] = useState<{
-        totalExpenditure: number;
-        totalRice: number;
-        mealDays: number;
-        monthlyData: { name: string; date: Date; balvatika: number; primary: number; middle: number; total: number }[];
-    }>({ totalExpenditure: 0, totalRice: 0, mealDays: 0, monthlyData: [] });
 
     // Daily Entry Reminder
     useEffect(() => {
@@ -41,13 +35,10 @@ const Dashboard: React.FC = () => {
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     }, []);
 
-    useEffect(() => {
-        setIsLoading(true);
-        
+    const dashboardData = useMemo(() => {
         const summary = calculateMonthlySummary(data, displayedMonthKey);
         const { totals, monthEntries } = summary;
 
-        // Create a Map for efficient lookups (O(1) on average) instead of using .find() in a loop
         const entriesMap = new Map<string, DailyEntry>();
         for (const entry of monthEntries) {
             entriesMap.set(entry.id, entry);
@@ -74,15 +65,21 @@ const Dashboard: React.FC = () => {
             });
         }
 
-        setDashboardData({
+        return {
             totalExpenditure: totals.expenditure,
             totalRice: totals.rice,
             mealDays: monthEntries.filter(e => e.totalPresent > 0).length,
             monthlyData: chartData
-        });
-        setIsLoading(false);
-    }, [data, displayedMonthKey]);
+        };
+    }, [data.entries, data.settings, displayedMonthKey, data.receipts, data.monthlyBalances]); // More specific dependencies
     
+    // Manage loading state based on when dashboardData is computed
+    useEffect(() => {
+        if (dashboardData) {
+            setIsLoading(false);
+        }
+    }, [dashboardData]);
+
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             return (

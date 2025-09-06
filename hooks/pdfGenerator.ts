@@ -1,6 +1,5 @@
-import { AppData, Category, ClassRoll, Receipt } from '../types';
+import { AppData, Category, ClassRoll } from '../types';
 import { calculateMonthlySummary } from '../services/summaryCalculator';
-import { CLASS_STRUCTURE } from '../constants';
 
 interface jsPDF {
     autoTable: (options: any) => jsPDF;
@@ -31,14 +30,14 @@ const addSignatureBlock = (doc: jsPDF, settings: AppData['settings'], startY: nu
 
     // MDM Incharge Signature (Left)
     doc.text('.........................................', leftPos, y, { align: 'center' });
-    doc.text(`(${settings.mdmIncharge.name || 'Name'})`, leftPos, y + 4, { align: 'center' });
+    doc.text(`(${settings.mdmIncharge?.name || 'Name'})`, leftPos, y + 4, { align: 'center' });
     doc.setFont(undefined, 'bold');
     doc.text('MDM Incharge', leftPos, y + 8, { align: 'center' });
 
     // Head of Institution Signature (Right)
     doc.setFont(undefined, 'normal');
     doc.text('.........................................', rightPos, y, { align: 'center' });
-    doc.text(`(${settings.headOfInstitution.name || 'Name'})`, rightPos, y + 4, { align: 'center' });
+    doc.text(`(${settings.headOfInstitution?.name || 'Name'})`, rightPos, y + 4, { align: 'center' });
     doc.setFont(undefined, 'bold');
     doc.text('Head of the Institution', rightPos, y + 8, { align: 'center' });
 };
@@ -212,21 +211,60 @@ const generateRollStatementPDF = (data: AppData): Blob => {
     const body: any[][] = [];
     
     let grandTotal = { genB: 0, genG: 0, stscB: 0, stscG: 0, totalB: 0, totalG: 0, onRoll: 0 };
+    
+    const calculateSectionTotals = (classes: ClassRoll[]) => {
+        return classes.reduce((acc, cr) => {
+            acc.genB += cr.general.boys;
+            acc.genG += cr.general.girls;
+            acc.stscB += cr.stsc.boys;
+            acc.stscG += cr.stsc.girls;
+            const totalBoys = cr.general.boys + cr.stsc.boys;
+            const totalGirls = cr.general.girls + cr.stsc.girls;
+            acc.totalB += totalBoys;
+            acc.totalG += totalGirls;
+            acc.onRoll += totalBoys + totalGirls;
+            return acc;
+        }, { genB: 0, genG: 0, stscB: 0, stscG: 0, totalB: 0, totalG: 0, onRoll: 0 });
+    };
+    
+    const sections = [
+        { title: 'Middle (VI-VIII)', ids: ['c8', 'c7', 'c6'] },
+        { title: 'Primary (I-V)', ids: ['c5', 'c4', 'c3', 'c2', 'c1'] },
+        { title: 'Pre-Primary', ids: ['bal', 'pp1', 'pp2'] },
+    ];
 
-    (settings.classRolls || []).forEach(cr => {
-        const totalBoys = cr.general.boys + cr.stsc.boys;
-        const totalGirls = cr.general.girls + cr.stsc.girls;
-        const onRoll = totalBoys + totalGirls;
-        
-        body.push([cr.name, cr.general.boys, cr.general.girls, cr.stsc.boys, cr.stsc.girls, totalBoys, totalGirls, onRoll]);
+    sections.forEach(section => {
+        const sectionClasses = (settings.classRolls || []).filter(cr => section.ids.includes(cr.id));
+        if (sectionClasses.length > 0) {
+            body.push([{ content: section.title, colSpan: 8, styles: { fontStyle: 'bold', fillColor: [254, 243, 199] } }]);
+            
+            sectionClasses.forEach(cr => {
+                const totalBoys = cr.general.boys + cr.stsc.boys;
+                const totalGirls = cr.general.girls + cr.stsc.girls;
+                const onRoll = totalBoys + totalGirls;
+                body.push([cr.name, cr.general.boys, cr.general.girls, cr.stsc.boys, cr.stsc.girls, totalBoys, totalGirls, onRoll]);
+            });
 
-        grandTotal.genB += cr.general.boys;
-        grandTotal.genG += cr.general.girls;
-        grandTotal.stscB += cr.stsc.boys;
-        grandTotal.stscG += cr.stsc.girls;
-        grandTotal.totalB += totalBoys;
-        grandTotal.totalG += totalGirls;
-        grandTotal.onRoll += onRoll;
+            const sectionTotals = calculateSectionTotals(sectionClasses);
+            body.push([
+                { content: `${section.title.split(' ')[0]} Total`, styles: { fontStyle: 'bold' } },
+                { content: sectionTotals.genB, styles: { fontStyle: 'bold' } },
+                { content: sectionTotals.genG, styles: { fontStyle: 'bold' } },
+                { content: sectionTotals.stscB, styles: { fontStyle: 'bold' } },
+                { content: sectionTotals.stscG, styles: { fontStyle: 'bold' } },
+                { content: sectionTotals.totalB, styles: { fontStyle: 'bold' } },
+                { content: sectionTotals.totalG, styles: { fontStyle: 'bold' } },
+                { content: sectionTotals.onRoll, styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } },
+            ]);
+            
+            grandTotal.genB += sectionTotals.genB;
+            grandTotal.genG += sectionTotals.genG;
+            grandTotal.stscB += sectionTotals.stscB;
+            grandTotal.stscG += sectionTotals.stscG;
+            grandTotal.totalB += sectionTotals.totalB;
+            grandTotal.totalG += sectionTotals.totalG;
+            grandTotal.onRoll += sectionTotals.onRoll;
+        }
     });
 
     const foot = [['Grand Total', grandTotal.genB, grandTotal.genG, grandTotal.stscB, grandTotal.stscG, grandTotal.totalB, grandTotal.totalG, grandTotal.onRoll]];
@@ -250,7 +288,7 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
     const { settings } = data;
     const { schoolDetails, rates } = settings;
     const summaryData = calculateMonthlySummary(data, selectedMonth);
-    const { monthEntries } = summaryData;
+    const { monthEntries, riceAbstracts, cashAbstracts } = summaryData;
     
     const monthDate = new Date(`${selectedMonth}-02`);
     const monthName = monthDate.toLocaleString('default', { month: 'long' });
@@ -266,6 +304,9 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
     });
 
     categories.forEach((category, index) => {
+        const categoryOnRoll = onRollTotals[category];
+        if (categoryOnRoll === 0) return; // Skip category if no students are enrolled
+
         if (index > 0) {
             doc.addPage();
         }
@@ -273,15 +314,13 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
         const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
 
         doc.setFontSize(14).setFont(undefined, 'bold');
-        doc.text(schoolDetails.name, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+        doc.text(schoolDetails.name, doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
         doc.setFontSize(11).setFont(undefined, 'normal');
-        doc.text(`Daily Consumption Register for ${categoryName} - ${monthName} ${year}`, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+        doc.text(`Daily Consumption Register for ${categoryName} - ${monthName} ${year}`, doc.internal.pageSize.getWidth() / 2, 16, { align: 'center' });
         
-        const head = [['S.No', 'Date', 'Roll', 'Present', 'Rice (kg)', 'Dal/Veg (₹)', 'Oil/Cond (₹)', 'Salt (₹)', 'Fuel (₹)', 'Total (₹)', 'Reason']];
+        const head = [['S.No', 'Date', 'Roll', 'Present', 'Rice (kg)', 'Dal/Veg (Rs)', 'Oil/Cond (Rs)', 'Salt (Rs)', 'Fuel (Rs)', 'Total (Rs)', 'Reason']];
         const body: any[][] = [];
         const totals = { present: 0, riceUsed: 0, dalVeg: 0, oilCond: 0, salt: 0, fuel: 0, totalCost: 0 };
-
-        const categoryOnRoll = onRollTotals[category];
 
         monthEntries.forEach((entry, entryIndex) => {
             const present = entry.present[category];
@@ -326,7 +365,7 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
         const foot = [[ 'Total', '', '', totals.present, totals.riceUsed.toFixed(3), totals.dalVeg.toFixed(2), totals.oilCond.toFixed(2), totals.salt.toFixed(2), totals.fuel.toFixed(2), totals.totalCost.toFixed(2), '' ]];
 
         doc.autoTable({
-            startY: 30,
+            startY: 22,
             head: head,
             body: body,
             foot: foot,
@@ -336,7 +375,58 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
             footStyles: { fillColor: [252, 211, 77] },
         });
 
-        addSignatureBlock(doc, settings, doc.lastAutoTable.finalY);
+        const mainTableFinalY = doc.lastAutoTable.finalY;
+        let abstractStartY = mainTableFinalY + 5;
+        
+        if (abstractStartY > doc.internal.pageSize.getHeight() - 50) {
+            doc.addPage();
+            abstractStartY = 20;
+        }
+
+        const riceCatAbstract = riceAbstracts[category];
+        const cashCatAbstract = cashAbstracts[category];
+        
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const tableWidth = (pageWidth / 2) - 18;
+        
+        doc.autoTable({
+            startY: abstractStartY,
+            head: [['Rice Abstract (kg)', 'Amount']],
+            body: [
+                ['Opening', riceCatAbstract.opening.toFixed(3)],
+                ['Received', riceCatAbstract.received.toFixed(3)],
+                ['Total', riceCatAbstract.total.toFixed(3)],
+                ['Consumed', riceCatAbstract.consumed.toFixed(3)],
+                ['Balance', { content: riceCatAbstract.balance.toFixed(3), styles: { fontStyle: 'bold' } }],
+            ],
+            theme: 'grid',
+            tableWidth: tableWidth,
+            margin: { left: 14 },
+            styles: { fontSize: 8, cellPadding: 1.5, halign: 'right' },
+            headStyles: { halign: 'center', fillColor: [254, 249, 195] },
+            columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
+        });
+
+        doc.autoTable({
+            startY: abstractStartY,
+            head: [['Cash Abstract (Rs)', 'Amount']],
+            body: [
+                ['Opening', cashCatAbstract.opening.toFixed(2)],
+                ['Received', cashCatAbstract.received.toFixed(2)],
+                ['Total', cashCatAbstract.total.toFixed(2)],
+                ['Expenditure', cashCatAbstract.expenditure.toFixed(2)],
+                ['Balance', { content: cashCatAbstract.balance.toFixed(2), styles: { fontStyle: 'bold' } }],
+            ],
+            theme: 'grid',
+            tableWidth: tableWidth,
+            margin: { left: pageWidth / 2 + 4 },
+            styles: { fontSize: 8, cellPadding: 1.5, halign: 'right' },
+            headStyles: { halign: 'center', fillColor: [254, 249, 195] },
+            columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
+        });
+        
+        const abstractTablesFinalY = doc.lastAutoTable.finalY;
+        addSignatureBlock(doc, settings, abstractTablesFinalY);
     });
     
     return doc.output('blob');
@@ -393,63 +483,6 @@ const generateRiceRequirementPDF = (data: AppData, selectedMonth: string): Blob 
     addSignatureBlock(doc, settings, doc.lastAutoTable.finalY + 20);
     return doc.output('blob');
 };
-
-const generateYearlyConsumptionPDF = (data: AppData, financialYear: string): Blob => {
-    const doc = new jspdf.jsPDF('l', 'mm', 'a4'); // Landscape
-    const { settings } = data;
-    const { schoolDetails } = settings;
-
-    const [startYear, endYear] = financialYear.split('-').map(Number);
-
-    doc.setFontSize(14).setFont(undefined, 'bold');
-    doc.text(schoolDetails.name.toUpperCase(), doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
-    doc.setFontSize(11).setFont(undefined, 'normal');
-    doc.text(`Yearly Consumption & Fund Report for Financial Year ${financialYear}`, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
-
-    const head = [['Month', 'Meal Days', 'Students Fed', 'Rice Rcvd (kg)', 'Rice Used (kg)', 'Rice Balance (kg)', 'Cash Rcvd (₹)', 'Cash Used (₹)', 'Cash Balance (₹)']];
-    const body: any[][] = [];
-    const totals = { mealDays: 0, present: 0, riceRcvd: 0, riceUsed: 0, cashRcvd: 0, cashUsed: 0 };
-    
-    for (let i = 0; i < 12; i++) {
-        const month = (i + 3) % 12 + 1; // April is month 4
-        const year = i < 9 ? startYear : endYear;
-        const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-        const summary = calculateMonthlySummary(data, monthKey);
-        
-        const monthName = new Date(year, month - 1, 1).toLocaleString('default', { month: 'short' });
-        const mealDays = summary.monthEntries.filter(e => e.totalPresent > 0).length;
-        const riceReceived = summary.riceAbstracts.balvatika.received + summary.riceAbstracts.primary.received + summary.riceAbstracts.middle.received;
-        const cashReceived = summary.cashAbstracts.balvatika.received + summary.cashAbstracts.primary.received + summary.cashAbstracts.middle.received;
-        const riceBalance = summary.closingBalance.rice.balvatika + summary.closingBalance.rice.primary + summary.closingBalance.rice.middle;
-        const cashBalance = summary.closingBalance.cash.balvatika + summary.closingBalance.cash.primary + summary.closingBalance.cash.middle;
-        
-        totals.mealDays += mealDays;
-        totals.present += summary.totals.present;
-        totals.riceRcvd += riceReceived;
-        totals.riceUsed += summary.totals.rice;
-        totals.cashRcvd += cashReceived;
-        totals.cashUsed += summary.totals.expenditure;
-        
-        body.push([ `${monthName} ${year}`, mealDays, summary.totals.present, riceReceived.toFixed(3), summary.totals.rice.toFixed(3), riceBalance.toFixed(3), cashReceived.toFixed(2), summary.totals.expenditure.toFixed(2), cashBalance.toFixed(2) ]);
-    }
-    
-    const finalMonthKey = `${endYear}-03`;
-    const finalSummary = calculateMonthlySummary(data, finalMonthKey);
-    const finalRiceBalance = finalSummary.closingBalance.rice.balvatika + finalSummary.closingBalance.rice.primary + finalSummary.closingBalance.rice.middle;
-    const finalCashBalance = finalSummary.closingBalance.cash.balvatika + finalSummary.closingBalance.cash.primary + finalSummary.closingBalance.cash.middle;
-
-    const foot = [[ 'Total', totals.mealDays, totals.present, totals.riceRcvd.toFixed(3), totals.riceUsed.toFixed(3), finalRiceBalance.toFixed(3), totals.cashRcvd.toFixed(2), totals.cashUsed.toFixed(2), finalCashBalance.toFixed(2) ]];
-
-    doc.autoTable({
-        startY: 30, head: head, body: body, foot: foot,
-        theme: 'grid', styles: { fontSize: 8, cellPadding: 1.5 },
-        headStyles: { fillColor: [245, 158, 11] }, footStyles: { fillColor: [252, 211, 77] },
-    });
-    
-    addSignatureBlock(doc, settings, doc.lastAutoTable.finalY);
-    return doc.output('blob');
-};
-
 
 const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: string): Blob => {
     const doc = new jspdf.jsPDF('l', 'mm', 'a4'); // Landscape
@@ -625,10 +658,6 @@ export const generatePDFReport = (
         case 'rice_requirement':
             pdfBlob = generateRiceRequirementPDF(data, monthOrYear);
             filename = `Rice_Requirement_${schoolName}_${period}.pdf`;
-            break;
-        case 'yearly_consumption':
-            pdfBlob = generateYearlyConsumptionPDF(data, monthOrYear);
-            filename = `Yearly_Report_Summary_${schoolName}_${period}.pdf`;
             break;
         case 'yearly_consumption_detailed':
             pdfBlob = generateYearlyConsumptionDetailedPDF(data, monthOrYear);

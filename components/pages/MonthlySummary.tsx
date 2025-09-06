@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../ui/Card';
 import { useData } from '../../hooks/useData';
@@ -151,42 +152,46 @@ const DetailedConsumptionTable: React.FC<{
     onRoll: number;
 }> = ({ entries, category, rates, onRoll }) => {
     
-    const dailyData = entries.map((entry, index) => {
-        const present = entry.present[category];
-        const mealServed = present > 0;
+    const { dailyData, totals } = useMemo(() => {
+        const data = entries.map((entry, index) => {
+            const present = entry.present[category];
+            const mealServed = present > 0;
+            
+            const riceUsed = mealServed ? (present * rates.rice[category]) / 1000 : 0;
+            const dalVeg = mealServed ? present * rates.dalVeg[category] : 0;
+            const oilCond = mealServed ? present * rates.oilCond[category] : 0;
+            const salt = mealServed ? present * rates.salt[category] : 0;
+            const fuel = mealServed ? present * rates.fuel[category] : 0;
+            const totalCost = mealServed ? dalVeg + oilCond + salt + fuel : 0;
+            
+            return {
+                sNo: index + 1,
+                date: entry.date,
+                present: present,
+                riceUsed,
+                dalVeg,
+                oilCond,
+                salt,
+                fuel,
+                totalCost,
+                reason: entry.reasonForNoMeal,
+                isSunday: new Date(entry.date + 'T00:00:00').getDay() === 0,
+            };
+        });
         
-        const riceUsed = mealServed ? (present * rates.rice[category]) / 1000 : 0;
-        const dalVeg = mealServed ? present * rates.dalVeg[category] : 0;
-        const oilCond = mealServed ? present * rates.oilCond[category] : 0;
-        const salt = mealServed ? present * rates.salt[category] : 0;
-        const fuel = mealServed ? present * rates.fuel[category] : 0;
-        const totalCost = mealServed ? dalVeg + oilCond + salt + fuel : 0;
-        
-        return {
-            sNo: index + 1,
-            date: entry.date,
-            present: present,
-            riceUsed,
-            dalVeg,
-            oilCond,
-            salt,
-            fuel,
-            totalCost,
-            reason: entry.reasonForNoMeal,
-            isSunday: new Date(entry.date + 'T00:00:00').getDay() === 0,
-        };
-    });
-    
-    const totals = dailyData.reduce((acc, day) => {
-        acc.present += day.present;
-        acc.riceUsed += day.riceUsed;
-        acc.dalVeg += day.dalVeg;
-        acc.oilCond += day.oilCond;
-        acc.salt += day.salt;
-        acc.fuel += day.fuel;
-        acc.totalCost += day.totalCost;
-        return acc;
-    }, { present: 0, riceUsed: 0, dalVeg: 0, oilCond: 0, salt: 0, fuel: 0, totalCost: 0 });
+        const totals = data.reduce((acc, day) => {
+            acc.present += day.present;
+            acc.riceUsed += day.riceUsed;
+            acc.dalVeg += day.dalVeg;
+            acc.oilCond += day.oilCond;
+            acc.salt += day.salt;
+            acc.fuel += day.fuel;
+            acc.totalCost += day.totalCost;
+            return acc;
+        }, { present: 0, riceUsed: 0, dalVeg: 0, oilCond: 0, salt: 0, fuel: 0, totalCost: 0 });
+
+        return { dailyData: data, totals };
+    }, [entries, category, rates]);
 
     const thClasses = "p-2 whitespace-nowrap";
     const tdClasses = "p-2 whitespace-nowrap";
@@ -265,7 +270,7 @@ const MonthlySummary: React.FC = () => {
 
     const summaryData = useMemo(
         () => calculateMonthlySummary(data, selectedMonth),
-        [data, selectedMonth]
+        [data.entries, data.receipts, data.monthlyBalances, data.settings, selectedMonth] // More specific dependencies
     );
     
     const { monthEntries, riceAbstracts, cashAbstracts, totals, categoryTotals, closingBalance } = summaryData;

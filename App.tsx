@@ -61,22 +61,15 @@ const AuthenticatedApp: React.FC = () => {
         return 'dashboard'; // Default for all other sessions
     });
 
-    const renderPage = () => {
-        switch (currentPage) {
-            case 'dashboard':
-                return <Dashboard />;
-            case 'summary':
-                return <MonthlySummary />;
-            case 'receipts':
-                return <Receipts />;
-            case 'settings':
-                return <Settings />;
-            case 'reports':
-                return <Reports />;
-            default:
-                return <Dashboard />;
-        }
+    const pages: Record<Page, React.ReactElement> = {
+        dashboard: <Dashboard />,
+        summary: <MonthlySummary />,
+        receipts: <Receipts />,
+        settings: <Settings />,
+        reports: <Reports />,
     };
+
+    const renderPage = () => pages[currentPage] || pages.dashboard;
 
     return (
         <NotificationProvider setCurrentPage={setCurrentPage}>
