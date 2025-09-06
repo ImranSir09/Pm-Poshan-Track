@@ -15,7 +15,7 @@ const reportDescriptions: Record<string, string> = {
     roll_statement: "Creates a summary of student enrollment numbers by class and social category.",
     daily_consumption: "Produces a detailed, register-style log of daily meals, attendance, and expenditure for the selected month.",
     rice_requirement: "Generates a formal certificate for the monthly rice requirement based on enrollment and working days.",
-    yearly_consumption: "Creates a comprehensive yearly report with monthly breakdowns of consumption, stock, and funds in a landscape format."
+    yearly_consumption_detailed: "A comprehensive yearly report with category-wise monthly breakdowns of consumption, stock, and funds."
 };
 
 const Reports: React.FC = () => {
@@ -116,11 +116,11 @@ const Reports: React.FC = () => {
                     'Total Rice Required': `${totalRiceKg.toFixed(3)} kg`,
                 };
                 break;
-            case 'yearly_consumption':
+            case 'yearly_consumption_detailed':
                 newSummary = {
-                    'Report': 'Yearly Consumption Report',
+                    'Report': 'Detailed Yearly Consumption Report',
                     'For Financial Year': selectedFinancialYear,
-                    'Note': 'This report processes data for 12 months and may take a moment to generate.'
+                    'Note': 'This report shows category-wise details for each month and may take time to generate.'
                 };
                 break;
         }
@@ -138,7 +138,7 @@ const Reports: React.FC = () => {
                 if (pdfPreviewData?.blobUrl) {
                     URL.revokeObjectURL(pdfPreviewData.blobUrl);
                 }
-                const result = generatePDFReport(reportType, data, reportType === 'yearly_consumption' ? selectedFinancialYear : selectedMonth);
+                const result = generatePDFReport(reportType, data, ['yearly_consumption_detailed'].includes(reportType) ? selectedFinancialYear : selectedMonth);
                 const blobUrl = URL.createObjectURL(result.pdfBlob);
                 setPdfPreviewData({ 
                     blobUrl, 
@@ -253,7 +253,8 @@ const Reports: React.FC = () => {
         showToast('All application data has been reset.', 'success');
     };
     
-    const needsMonth = !['roll_statement', 'yearly_consumption'].includes(reportType);
+    const needsMonth = !['roll_statement', 'yearly_consumption_detailed'].includes(reportType);
+    const needsYear = ['yearly_consumption_detailed'].includes(reportType);
 
     return (
         <>
@@ -333,7 +334,7 @@ const Reports: React.FC = () => {
                                 <option value="roll_statement">Roll Statement</option>
                                 <option value="daily_consumption">Daily Consumption Register</option>
                                 <option value="rice_requirement">Rice Requirement Certificate</option>
-                                <option value="yearly_consumption">Yearly Consumption Report</option>
+                                <option value="yearly_consumption_detailed">Yearly Consumption Report (Detailed)</option>
                             </select>
                             <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">{reportDescriptions[reportType]}</p>
                         </div>
@@ -349,7 +350,7 @@ const Reports: React.FC = () => {
                                 />
                             </div>
                         )}
-                         {reportType === 'yearly_consumption' && (
+                         {needsYear && (
                              <div>
                                 <label htmlFor="year-select" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Select Financial Year</label>
                                 <select
