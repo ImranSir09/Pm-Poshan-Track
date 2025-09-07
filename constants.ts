@@ -19,8 +19,8 @@ export const SIGNUP_KEY = 'PM-POSHAN-2024';
 
 export const DEFAULT_SETTINGS: Settings = {
     schoolDetails: {
-        name: "Govt. Model School",
-        udise: "",
+        name: "Your School Name",
+        udise: "01234567890",
         type: "Co-Educational",
         category: "Primary with Upper Primary",
         kitchenType: "School Kitchen",

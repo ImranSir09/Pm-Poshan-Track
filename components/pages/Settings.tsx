@@ -224,6 +224,23 @@ const SettingsPage: React.FC = () => {
     const primaryTotals = useMemo(() => calculateSectionTotals(primaryClasses), [primaryClasses]);
     const prePrimaryTotals = useMemo(() => calculateSectionTotals(prePrimaryClasses), [prePrimaryClasses]);
 
+    const foodRateTotals = useMemo(() => {
+        const { rates } = settings;
+        const dalVeg = rates.dalVeg || { balvatika: 0, primary: 0, middle: 0 };
+        const oilCond = rates.oilCond || { balvatika: 0, primary: 0, middle: 0 };
+        const salt = rates.salt || { balvatika: 0, primary: 0, middle: 0 };
+        const fuel = rates.fuel || { balvatika: 0, primary: 0, middle: 0 };
+        
+        const balvatika = dalVeg.balvatika + oilCond.balvatika + salt.balvatika + fuel.balvatika;
+        const primary = dalVeg.primary + oilCond.primary + salt.primary + fuel.primary;
+        const middle = dalVeg.middle + oilCond.middle + salt.middle + fuel.middle;
+        
+        return {
+            balvatika: parseFloat(balvatika.toPrecision(15)),
+            primary: parseFloat(primary.toPrecision(15)),
+            middle: parseFloat(middle.toPrecision(15)),
+        };
+    }, [settings.rates]);
 
     return (
         <div className="pb-32">
@@ -559,6 +576,26 @@ const SettingsPage: React.FC = () => {
                                         </div>
                                         )
                                     })}
+                                     <div className="pt-3 mt-3 border-t border-amber-300/50 dark:border-gray-600">
+                                        <p className="font-bold text-amber-800 dark:text-amber-300 mb-1 capitalize text-sm">
+                                            Total Per Student Cost (₹)
+                                        </p>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <div className="bg-amber-200/50 dark:bg-gray-800/60 p-2 rounded-md text-center">
+                                                <p className="text-xs text-stone-500 dark:text-gray-400">Balvatika</p>
+                                                <p className="font-semibold text-stone-800 dark:text-white">₹{foodRateTotals.balvatika.toFixed(2)}</p>
+                                            </div>
+                                            <div className="bg-amber-200/50 dark:bg-gray-800/60 p-2 rounded-md text-center">
+                                                <p className="text-xs text-stone-500 dark:text-gray-400">Primary</p>
+                                                <p className="font-semibold text-stone-800 dark:text-white">₹{foodRateTotals.primary.toFixed(2)}</p>
+                                            </div>
+                                            <div className="bg-amber-200/50 dark:bg-gray-800/60 p-2 rounded-md text-center">
+                                                <p className="text-xs text-stone-500 dark:text-gray-400">Middle</p>
+                                                <p className="font-semibold text-stone-800 dark:text-white">₹{foodRateTotals.middle.toFixed(2)}</p>
+                                            </div>
+                                        </div>
+                                        <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">Auto-calculated sum of Dal/Veg, Oil/Cond, Salt, and Fuel rates.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
