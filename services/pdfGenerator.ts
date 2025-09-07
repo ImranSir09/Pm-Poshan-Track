@@ -653,6 +653,7 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
             0: { halign: 'left', fontStyle: 'bold' },
             1: { halign: 'left' } 
         },
+        showFoot: 'lastPage',
     });
     
     addSignatureBlock(doc, settings, doc.lastAutoTable.finalY);
