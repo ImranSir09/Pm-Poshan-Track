@@ -1,9 +1,9 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../ui/Card';
 import { useData } from '../../hooks/useData';
 import { Category, AbstractData, DailyEntry, Rates } from '../../types';
 import { calculateMonthlySummary } from '../../services/summaryCalculator';
+import Button from '../ui/Button';
 
 const AbstractTable: React.FC<{ title: string; data: Record<Category, AbstractData>; unit: string; decimals: number; }> = ({ title, data, unit, decimals }) => {
     const total = {
@@ -266,6 +266,7 @@ const MonthlySummary: React.FC = () => {
     const { data, saveMonthlyBalance } = useData();
     const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
     const [view, setView] = useState<'overall' | Category>('overall');
+    const [isDetailsVisible, setIsDetailsVisible] = useState(false);
     const { settings } = data;
 
     const summaryData = useMemo(
@@ -298,6 +299,10 @@ const MonthlySummary: React.FC = () => {
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedMonth, closingBalance]); // Intentionally omitting saveMonthlyBalance
+
+    useEffect(() => {
+        setIsDetailsVisible(false);
+    }, [view, selectedMonth]);
 
     const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSelectedMonth(e.target.value);
@@ -407,15 +412,34 @@ const MonthlySummary: React.FC = () => {
                     </Card>
 
                     <Card title={view === 'overall' ? "Daily Entries for the Month" : "Daily Consumption Register"}>
-                        {view === 'overall' ? (
-                           <SimpleDailyEntriesTable entries={simpleDisplayedEntries} />
+                        {isDetailsVisible ? (
+                            <>
+                                {view === 'overall' ? (
+                                   <SimpleDailyEntriesTable entries={simpleDisplayedEntries} />
+                                ) : (
+                                    <DetailedConsumptionTable
+                                        entries={monthEntries}
+                                        category={view}
+                                        rates={settings.rates}
+                                        onRoll={onRoll[view]}
+                                    />
+                                )}
+                                <Button onClick={() => setIsDetailsVisible(false)} className="w-full mt-4" variant="secondary">
+                                    Hide Details
+                                </Button>
+                            </>
                         ) : (
-                            <DetailedConsumptionTable
-                                entries={monthEntries}
-                                category={view}
-                                rates={settings.rates}
-                                onRoll={onRoll[view]}
-                            />
+                            <div className="text-center py-4">
+                                <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">
+                                    {view === 'overall'
+                                        ? "A detailed list of daily entries is available."
+                                        : "A detailed day-by-day consumption register is available."
+                                    }
+                                </p>
+                                <Button onClick={() => setIsDetailsVisible(true)}>
+                                    {view === 'overall' ? 'Show Daily Breakdown' : 'Show Detailed Register'}
+                                </Button>
+                            </div>
                         )}
                     </Card>
                 </>

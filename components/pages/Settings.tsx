@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo } from 'react';
 import { nanoid } from 'nanoid';
 import { Accordion, AccordionItem } from '../ui/Accordion';
@@ -12,6 +10,7 @@ import { CLASS_STRUCTURE } from '../../constants';
 import { indianStates, jkDistrictsWithZones } from '../../data/locations';
 import { validateSettings } from '../../services/validator';
 import NumberInput from '../ui/NumberInput';
+import DataManagement from '../ui/DataManagement';
 
 
 const calculateSectionTotals = (classes: ClassRoll[]) => {
@@ -695,6 +694,9 @@ const SettingsPage: React.FC = () => {
                                 </div>
                             </div>
                         </div>
+                    </AccordionItem>
+                    <AccordionItem id="data" title="Data Management & Help">
+                        <DataManagement />
                     </AccordionItem>
                 </Accordion>
             </div>

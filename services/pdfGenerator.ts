@@ -1,5 +1,4 @@
-
-import { AppData, Category, ClassRoll } from '../types';
+import { AppData, Category, ClassRoll, Settings } from '../types';
 import { calculateMonthlySummary, getOpeningBalanceInfo } from './summaryCalculator';
 
 interface jsPDF {
@@ -55,9 +54,13 @@ const drawCheckbox = (doc: jsPDF, x: number, y: number, text: string, checked: b
     }
 };
 
-const generateMDCF = (data: AppData, selectedMonth: string): Blob => {
+type MdcfOverrideData = Partial<Pick<Settings, 'healthStatus' | 'inspectionReport' | 'cooks' | 'mmeExpenditure'>>;
+
+const generateMDCF = (data: AppData, selectedMonth: string, overrideData?: MdcfOverrideData): Blob => {
     const doc = new jspdf.jsPDF();
-    const { settings } = data;
+    
+    // FIX: Merge override data with main settings to ensure report uses month-specific data.
+    const settings = { ...data.settings, ...(overrideData || {}) };
     const { schoolDetails } = settings;
     const summaryData = calculateMonthlySummary(data, selectedMonth);
     const { monthEntries, riceAbstracts, cashAbstracts, categoryTotals } = summaryData;
@@ -237,7 +240,8 @@ const generateRollStatementPDF = (data: AppData): Blob => {
     sections.forEach(section => {
         const sectionClasses = (settings.classRolls || []).filter(cr => section.ids.includes(cr.id));
         if (sectionClasses.length > 0) {
-            // FIX: Cast cell object to 'any' to allow 'colSpan' property, resolving TypeScript error.
+            // NOTE: Casting the cell content object to `any` is a necessary workaround.
+            // The `jspdf-autotable` type definitions do not properly include properties like `colSpan`.
             body.push([{ content: section.title, colSpan: 8, styles: { fontStyle: 'bold', fillColor: [254, 243, 199] } } as any]);
             
             sectionClasses.forEach(cr => {
@@ -358,7 +362,8 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
                     '-'
                 ]);
             } else {
-                 // FIX: Cast cell object to 'any' to allow 'colSpan' property, resolving TypeScript error.
+                 // NOTE: Casting the cell content object to `any` is a necessary workaround.
+                 // The `jspdf-autotable` type definitions do not properly include properties like `colSpan`.
                  body.push([
                     { content: `${new Date(entry.date + 'T00:00:00').toLocaleDateString('en-IN')} - ${entry.reasonForNoMeal || 'No Meal Served'}`, colSpan: 11, styles: { halign: 'center', fontStyle: 'italic', textColor: [255, 0, 0] } } as any
                 ]);
@@ -518,17 +523,13 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
 
     const head = [
         [
-            // FIX: Cast cell object to 'any' to allow 'rowSpan' property, resolving TypeScript error.
+            // NOTE: Casting cell content objects to `any` is a necessary workaround.
+            // The `jspdf-autotable` type definitions do not properly include properties like `rowSpan` or `colSpan`.
             { content: 'Month', rowSpan: 2, styles: { valign: 'middle' } } as any,
-            // FIX: Cast cell object to 'any' to allow 'rowSpan' property, resolving TypeScript error.
             { content: 'Category', rowSpan: 2, styles: { valign: 'middle' } } as any,
-            // FIX: Cast cell object to 'any' to allow 'rowSpan' property, resolving TypeScript error.
             { content: 'On Roll', rowSpan: 2, styles: { valign: 'middle' } } as any,
-            // FIX: Cast cell object to 'any' to allow 'rowSpan' property, resolving TypeScript error.
             { content: 'Meals Served', rowSpan: 2, styles: { valign: 'middle' } } as any,
-            // FIX: Cast cell object to 'any' to allow 'colSpan' property, resolving TypeScript error.
             { content: 'Rice (in kg)', colSpan: 4, styles: { halign: 'center' } } as any,
-            // FIX: Cast cell object to 'any' to allow 'colSpan' property, resolving TypeScript error.
             { content: 'Funds (in Rs)', colSpan: 4, styles: { halign: 'center' } } as any,
         ],
         [
@@ -587,7 +588,7 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
             ];
 
             if (catIndex === 0) {
-                // FIX: Cast cell object to 'any' to allow 'rowSpan' property, resolving TypeScript error.
+                // NOTE: See comment above regarding `any` casting for `rowSpan`.
                 rowData.unshift({ content: monthName, rowSpan: 3 } as any);
             }
 
@@ -662,14 +663,14 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
 };
 
 
-export const generatePDFReport = (reportType: string, data: AppData, parameter: string): { pdfBlob: Blob; filename: string } => {
+export const generatePDFReport = (reportType: string, data: AppData, parameter: string, overrideData?: MdcfOverrideData): { pdfBlob: Blob; filename: string } => {
     const schoolName = (data.settings.schoolDetails.name || 'School').replace(/[\\/:"*?<>|.\s]+/g, '_');
     let pdfBlob: Blob;
     let filename = `${schoolName}_Report.pdf`;
 
     switch (reportType) {
         case 'mdcf':
-            pdfBlob = generateMDCF(data, parameter);
+            pdfBlob = generateMDCF(data, parameter, overrideData);
             filename = `${schoolName}_MDCF_${parameter}.pdf`;
             break;
         case 'roll_statement':
