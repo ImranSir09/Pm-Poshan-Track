@@ -1,6 +1,7 @@
 
+
 import React, { useMemo, useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 import Card from '../ui/Card';
 import { useData } from '../../hooks/useData';
 import { DailyEntry } from '../../types';
@@ -82,9 +83,14 @@ const Dashboard: React.FC = () => {
 
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
+            // FIX: Check if payload and its properties exist to prevent runtime errors.
+            const isSunday = payload[0]?.payload?.date?.getDay() === 0;
             return (
                 <div className="bg-white/80 dark:bg-gray-800/80 p-2 border border-amber-200/50 dark:border-gray-600 rounded text-xs shadow-lg backdrop-blur-sm">
-                    <p className="label text-stone-700 dark:text-gray-300">{`Date: ${label}`}</p>
+                    <p className="label text-stone-700 dark:text-gray-300 font-semibold">
+                        {`Date: ${label}`}
+                        {isSunday && <span className="text-red-500 ml-1">(Sunday)</span>}
+                    </p>
                     <p style={{ color: '#a8a29e' }}>{`Balvatika: ${payload[0].value}`}</p>
                     <p style={{ color: '#f59e0b' }}>{`Primary: ${payload[1].value}`}</p>
                     <p style={{ color: '#ffc658' }}>{`Middle: ${payload[2].value}`}</p>
@@ -149,12 +155,21 @@ const Dashboard: React.FC = () => {
                     </svg>
                 </div>
                 <div className="relative">
-                    <div style={{ width: '100%', height: 100 }}>
+                    <div style={{ width: '100%', height: 200 }}>
                         <ResponsiveContainer>
                             <BarChart data={dashboardData.monthlyData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                                <XAxis dataKey="name" tick={{ fill: '#78716c', fontSize: 10 }} axisLine={{ stroke: '#d6d3d1' }} tickLine={{ stroke: '#d6d3d1' }} className="dark:tick={{ fill: '#9ca3af' }} dark:axisLine={{ stroke: '#4b5563' }} dark:tickLine={{ stroke: '#4b5563' }}" />
+                                <XAxis dataKey="name" interval={0} tick={{ fill: '#78716c', fontSize: 8 }} axisLine={{ stroke: '#d6d3d1' }} tickLine={{ stroke: '#d6d3d1' }} className="dark:tick={{ fill: '#9ca3af' }} dark:axisLine={{ stroke: '#4b5563' }} dark:tickLine={{ stroke: '#4b5563' }}" />
                                 <YAxis tick={{ fill: '#78716c', fontSize: 10 }} axisLine={{ stroke: '#d6d3d1' }} tickLine={{ stroke: '#d6d3d1' }} className="dark:tick={{ fill: '#9ca3af' }} dark:axisLine={{ stroke: '#4b5563' }} dark:tickLine={{ stroke: '#4b5563' }}" />
                                 <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(180,180,120,0.1)' }} />
+
+                                {/* Add faint reference lines for Sundays with no attendance to make them noticeable */}
+                                {dashboardData.monthlyData.map((entry, index) => {
+                                    if (entry.date.getDay() === 0 && entry.total === 0) {
+                                        return <ReferenceLine key={`sunday-ref-${index}`} x={entry.name} stroke="rgba(239, 68, 68, 0.5)" strokeDasharray="2 2" />;
+                                    }
+                                    return null;
+                                })}
+
                                 <Bar dataKey="balvatika" stackId="a" fill="#a8a29e" radius={[5, 5, 0, 0]} barSize={10} >
                                      {dashboardData.monthlyData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.date.getDay() === 0 ? '#ef4444' : '#a8a29e'} />

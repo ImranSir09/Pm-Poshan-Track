@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -77,6 +78,33 @@
       }
       .page-transition-wrapper {
           animation: page-enter 0.5s ease-out forwards;
+      }
+
+      /* Print-specific styles for the PDF Preview Modal */
+      @media print {
+        body > *:not(.pdf-preview-container) {
+          display: none;
+        }
+        .pdf-preview-container {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          padding: 0;
+          margin: 0;
+          background: none;
+          backdrop-filter: none;
+        }
+        .pdf-preview-header {
+          display: none;
+        }
+        .pdf-preview-content-area,
+        .pdf-preview-content-area object {
+          display: block;
+          width: 100%;
+          height: 100%;
+        }
       }
     </style>
   <script type="importmap">
