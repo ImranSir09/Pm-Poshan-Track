@@ -1,3 +1,4 @@
+
 import React, { useState, ReactNode, createContext, useContext } from 'react';
 
 interface AccordionContextType {
@@ -25,10 +26,10 @@ export const AccordionItem: React.FC<{ id: string; title: ReactNode; children: R
     const isOpen = activeId === id;
 
     return (
-        <div className="bg-white dark:bg-white/5 border border-amber-200/50 dark:border-white/10 rounded-xl overflow-hidden transition-all duration-300 shadow-sm">
+        <div className="bg-white dark:bg-white/5 border border-slate-200/50 dark:border-white/10 rounded-xl overflow-hidden transition-all duration-300 shadow-sm">
             <button
                 onClick={() => toggleItem(id)}
-                className="w-full flex justify-between items-center p-4 text-left font-bold text-amber-700 dark:text-amber-400 text-base"
+                className="w-full flex justify-between items-center p-4 text-left font-bold text-sky-700 dark:text-sky-400 text-base"
                 aria-expanded={isOpen}
                 aria-controls={`content-${id}`}
             >
@@ -41,7 +42,7 @@ export const AccordionItem: React.FC<{ id: string; title: ReactNode; children: R
                 id={`content-${id}`}
                 className={`transition-all duration-500 ease-in-out overflow-hidden ${isOpen ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'}`}
             >
-                <div className="p-4 pt-2 border-t border-amber-200/50 dark:border-white/10">
+                <div className="p-4 pt-2 border-t border-slate-200/50 dark:border-white/10">
                     {children}
                 </div>
             </div>

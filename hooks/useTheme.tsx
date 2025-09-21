@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
@@ -19,8 +20,8 @@ const applyTheme = (theme: Theme) => {
     root.classList.toggle('dark', isDark);
 
     // Explicitly set body background class for robustness
-    body.classList.remove('bg-amber-50', 'bg-gray-900');
-    body.classList.add(isDark ? 'bg-gray-900' : 'bg-amber-50');
+    body.classList.remove('bg-slate-50', 'bg-slate-900');
+    body.classList.add(isDark ? 'bg-slate-900' : 'bg-slate-50');
 
     // Ensure transition classes are present
     if (!body.classList.contains('transition-colors')) {

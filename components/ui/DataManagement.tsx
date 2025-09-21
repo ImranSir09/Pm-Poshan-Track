@@ -106,7 +106,7 @@ const DataManagement: React.FC = () => {
     return (
         <>
             <Modal isOpen={isResetModalOpen} onClose={() => setResetModalOpen(false)} title="Confirm Reset">
-                <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">Are you sure you want to delete ALL data? This action cannot be undone. It is highly recommended to export your data first.</p>
+                <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">Are you sure you want to delete ALL data? This action cannot be undone. It is highly recommended to export your data first.</p>
                 <div className="flex justify-end space-x-2">
                     <Button variant="secondary" onClick={() => setResetModalOpen(false)}>Cancel</Button>
                     <Button variant="danger" onClick={handleReset}>Yes, Reset Data</Button>
@@ -115,11 +115,11 @@ const DataManagement: React.FC = () => {
             
             <Modal isOpen={!!importConfirmation} onClose={() => setImportConfirmation(null)} title="Confirm Data Import">
                 <div className="space-y-4">
-                    <p className="text-sm text-stone-600 dark:text-gray-300">
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
                         Please review the details from the file before importing.
                         <strong className="block mt-1 text-yellow-600 dark:text-yellow-400">Warning: This will overwrite all current application data.</strong>
                     </p>
-                    <div className="text-sm space-y-2 bg-amber-100/40 dark:bg-gray-800/50 p-3 rounded-lg">
+                    <div className="text-sm space-y-2 bg-slate-100/40 dark:bg-slate-800/50 p-3 rounded-lg">
                         <p><strong>School Name:</strong> {importConfirmation?.summary.schoolName}</p>
                         <p><strong>UDISE:</strong> {importConfirmation?.summary.udise}</p>
                         <p><strong>Daily Entries Found:</strong> {importConfirmation?.summary.entryCount}</p>
@@ -137,14 +137,14 @@ const DataManagement: React.FC = () => {
                     <div className="space-y-3">
                         <div>
                             <p className="text-sm font-medium mb-1">Export Data</p>
-                            <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
                                 Save all app data to a file. <strong>This is your only backup.</strong> Store it in a safe place (e.g., email, cloud drive) to prevent data loss.
                             </p>
                             <Button onClick={handleExport} className="w-full">Export to JSON</Button>
                         </div>
                         <div>
                             <p className="text-sm font-medium mb-1">Import Data</p>
-                            <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
                                 Restore data from a backup file. <span className="font-bold text-yellow-600 dark:text-yellow-400">Warning: This will replace all existing data in the app.</span>
                             </p>
                             <Button onClick={handleImportClick} variant="secondary" className="w-full">Select File to Import</Button>
@@ -154,17 +154,17 @@ const DataManagement: React.FC = () => {
                 </Card>
 
                 <Card title="Reset Application">
-                    <p className="text-xs text-stone-500 dark:text-gray-400 mb-2">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
                         <span className="font-bold text-red-600 dark:text-red-400">This action is irreversible.</span> It will permanently delete all data. Ensure you have a backup if you wish to restore later.
                     </p>
                     <Button onClick={() => setResetModalOpen(true)} variant="danger" className="w-full">Reset All Data</Button>
                 </Card>
 
                 <Card title="Help & About">
-                    <div className="space-y-4 text-sm text-stone-600 dark:text-gray-300">
+                    <div className="space-y-4 text-sm text-slate-600 dark:text-slate-300">
                         <div>
-                            <h3 className="font-semibold text-amber-700 dark:text-amber-400">App Guide</h3>
-                            <p className="text-xs text-stone-500 dark:text-gray-400 mt-1">
+                            <h3 className="font-semibold text-sky-700 dark:text-sky-400">App Guide</h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                 Here’s a quick guide to the app's functions:
                             </p>
                             <ul className="list-disc list-inside space-y-1 mt-2 text-xs">
@@ -176,17 +176,17 @@ const DataManagement: React.FC = () => {
                             </ul>
                         </div>
                         <div>
-                            <h3 className="font-semibold text-amber-700 dark:text-amber-400">Feedback & Support</h3>
-                            <p className="text-xs text-stone-500 dark:text-gray-400 mt-1">
+                            <h3 className="font-semibold text-sky-700 dark:text-sky-400">Feedback & Support</h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                 Have questions or suggestions? Your feedback is valuable! Please get in touch.
                             </p>
                         </div>
-                        <div className="text-xs pt-2 border-t border-amber-200/50 dark:border-white/10">
-                            <p><strong>App Version:</strong> 1.2.1</p>
+                        <div className="text-xs pt-2 border-t border-slate-200/50 dark:border-white/10">
+                            <p><strong>App Version:</strong> 2.0.0</p>
                             <p><strong>Developer:</strong> Imran Gani Mugloo</p>
-                            <p><strong>Contact:</strong> <a href="tel:+919149690096" className="text-amber-600 dark:text-amber-400 hover:underline">+91 9149690096</a></p>
-                            <p><strong>Email:</strong> <a href="mailto:emraanmugloo123@gmail.com" className="text-amber-600 dark:text-amber-400 hover:underline">emraanmugloo123@gmail.com</a></p>
-                            <p><strong>Website:</strong> <a href="https://imransir09.github.io/Pm-Poshan-Track/" target="_blank" rel="noopener noreferrer" className="text-amber-600 dark:text-amber-400 hover:underline">Pm-Poshan-Track</a></p>
+                            <p><strong>Contact:</strong> <a href="tel:+919149690096" className="text-sky-600 dark:text-sky-400 hover:underline">+91 9149690096</a></p>
+                            <p><strong>Email:</strong> <a href="mailto:emraanmugloo123@gmail.com" className="text-sky-600 dark:text-sky-400 hover:underline">emraanmugloo123@gmail.com</a></p>
+                            <p><strong>Website:</strong> <a href="https://imransir09.github.io/Pm-Poshan-Track/" target="_blank" rel="noopener noreferrer" className="text-sky-600 dark:text-sky-400 hover:underline">Pm-Poshan-Track</a></p>
                         </div>
                     </div>
                 </Card>

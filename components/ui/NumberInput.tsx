@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface NumberInputProps {
@@ -42,7 +43,7 @@ const NumberInput: React.FC<NumberInputProps> = ({ label, id, value, onChange, m
 
     return (
         <div>
-            <label htmlFor={id} className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">
+            <label htmlFor={id} className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
                 {label}
             </label>
             <div className="flex items-center">
@@ -50,7 +51,7 @@ const NumberInput: React.FC<NumberInputProps> = ({ label, id, value, onChange, m
                     type="button"
                     onClick={handleDecrement}
                     disabled={disabled || value <= min}
-                    className="px-2 py-2.5 bg-amber-200/50 hover:bg-amber-300/50 dark:bg-gray-600/50 dark:hover:bg-gray-700/70 text-stone-800 dark:text-white rounded-l-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-2 py-2.5 bg-slate-200/50 hover:bg-slate-300/50 dark:bg-slate-600/50 dark:hover:bg-slate-700/70 text-slate-800 dark:text-white rounded-l-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label={`Decrease ${label}`}
                 >
                     -
@@ -64,13 +65,13 @@ const NumberInput: React.FC<NumberInputProps> = ({ label, id, value, onChange, m
                     max={max}
                     step={step}
                     disabled={disabled}
-                    className="w-full bg-amber-100/60 dark:bg-gray-700/50 border-y border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm text-center focus:ring-amber-500 focus:border-amber-500 block p-2.5 placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-slate-100/60 dark:bg-slate-700/50 border-y border-slate-300/50 dark:border-slate-600 text-slate-800 dark:text-white text-sm text-center focus:ring-sky-500 focus:border-sky-500 block p-2.5 placeholder-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <button
                     type="button"
                     onClick={handleIncrement}
                     disabled={disabled || (max !== undefined && value >= max)}
-                    className="px-2 py-2.5 bg-amber-200/50 hover:bg-amber-300/50 dark:bg-gray-600/50 dark:hover:bg-gray-700/70 text-stone-800 dark:text-white rounded-r-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-2 py-2.5 bg-slate-200/50 hover:bg-slate-300/50 dark:bg-slate-600/50 dark:hover:bg-slate-700/70 text-slate-800 dark:text-white rounded-r-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label={`Increase ${label}`}
                 >
                     +

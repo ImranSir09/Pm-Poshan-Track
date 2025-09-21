@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -236,8 +237,8 @@ const DailyEntryPage: React.FC = () => {
         <>
              <Modal isOpen={isEntryModalOpen} onClose={() => setEntryModalOpen(false)} title={`Entry for ${new Date(selectedDate+'T00:00:00').toLocaleDateString('en-IN')}`} zIndex="z-40">
                 <div className="space-y-4">
-                     <fieldset className="border border-amber-300/50 dark:border-gray-600 rounded-lg p-3">
-                        <legend className="text-sm font-medium text-amber-700 dark:text-amber-400 px-1">Students Present</legend>
+                     <fieldset className="border border-slate-300/50 dark:border-slate-600 rounded-lg p-3">
+                        <legend className="text-sm font-medium text-sky-700 dark:text-sky-400 px-1">Students Present</legend>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <NumberInput label={`Balvatika (${onRoll.balvatika})`} id="balvatika" value={present.balvatika} onChange={val => handlePresentChange('balvatika', val)} min={0} max={onRoll.balvatika} />
                             <NumberInput label={`Primary (${onRoll.primary})`} id="primary" value={present.primary} onChange={val => handlePresentChange('primary', val)} min={0} max={onRoll.primary} />
@@ -245,13 +246,13 @@ const DailyEntryPage: React.FC = () => {
                         </div>
                     </fieldset>
 
-                     <fieldset className="border border-amber-300/50 dark:border-gray-600 rounded-lg p-3">
-                        <legend className="text-sm font-medium text-amber-700 dark:text-amber-400 px-1">Auto-calculated Consumption</legend>
+                     <fieldset className="border border-slate-300/50 dark:border-slate-600 rounded-lg p-3">
+                        <legend className="text-sm font-medium text-sky-700 dark:text-sky-400 px-1">Auto-calculated Consumption</legend>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
                             {Object.entries(consumption).map(([key, value]) => (
-                                <div key={key} className="bg-amber-100/40 dark:bg-gray-800/50 p-2 rounded-md">
-                                    <p className="text-xs text-stone-500 dark:text-gray-400 capitalize">{key === 'dalVeg' ? 'Dal & Veg' : key === 'oilCond' ? 'Oil & Cond.' : key}</p>
-                                    <p className="font-semibold text-stone-800 dark:text-white">{key === 'rice' ? `${value} kg` : `₹${value}`}</p>
+                                <div key={key} className="bg-slate-100/40 dark:bg-slate-800/50 p-2 rounded-md">
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{key === 'dalVeg' ? 'Dal & Veg' : key === 'oilCond' ? 'Oil & Cond.' : key}</p>
+                                    <p className="font-semibold text-slate-800 dark:text-white">{key === 'rice' ? `${value} kg` : `₹${value}`}</p>
                                 </div>
                             ))}
                         </div>
@@ -263,7 +264,7 @@ const DailyEntryPage: React.FC = () => {
                 </div>
             </Modal>
             <Modal isOpen={isOverwriteModalOpen} onClose={() => setOverwriteModalOpen(false)} title="Confirm Overwrite" zIndex="z-50">
-                <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">An entry for this date already exists. Do you want to overwrite it?</p>
+                <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">An entry for this date already exists. Do you want to overwrite it?</p>
                 <div className="flex justify-end space-x-2">
                     <Button variant="secondary" onClick={() => setOverwriteModalOpen(false)}>Cancel</Button>
                     <Button variant="danger" onClick={confirmOverwrite}>Overwrite</Button>
@@ -271,9 +272,9 @@ const DailyEntryPage: React.FC = () => {
             </Modal>
              <Modal isOpen={isReasonModalOpen} onClose={() => setReasonModalOpen(false)} title="Reason for No Meal" zIndex="z-50">
                 <div className="space-y-4">
-                    <p className="text-sm text-stone-600 dark:text-gray-300">Please provide a reason for not serving the meal today.</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">Please provide a reason for not serving the meal today.</p>
                     <div>
-                        <label htmlFor="main-reason-select" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Main Reason</label>
+                        <label htmlFor="main-reason-select" className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Main Reason</label>
                         <select
                             id="main-reason-select"
                             value={mainReason}
@@ -281,7 +282,7 @@ const DailyEntryPage: React.FC = () => {
                                 setMainReason(e.target.value as MainReason);
                                 setSubReason(''); // Reset sub-reason when main reason changes
                             }}
-                            className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5"
+                            className="w-full bg-slate-100/60 dark:bg-slate-700/50 border border-slate-300/50 dark:border-slate-600 text-slate-800 dark:text-white text-sm rounded-lg focus:ring-sky-500 focus:border-sky-500 block p-2.5"
                         >
                             <option value="">Select a reason...</option>
                             {MAIN_REASONS.map(reason => <option key={reason} value={reason}>{reason}</option>)}
@@ -290,12 +291,12 @@ const DailyEntryPage: React.FC = () => {
 
                     {currentSubReasons.length > 0 && (
                         <div>
-                            <label htmlFor="sub-reason-select" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Sub-Reason</label>
+                            <label htmlFor="sub-reason-select" className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Sub-Reason</label>
                             <select
                                 id="sub-reason-select"
                                 value={subReason}
                                 onChange={(e) => setSubReason(e.target.value)}
-                                className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5"
+                                className="w-full bg-slate-100/60 dark:bg-slate-700/50 border border-slate-300/50 dark:border-slate-600 text-slate-800 dark:text-white text-sm rounded-lg focus:ring-sky-500 focus:border-sky-500 block p-2.5"
                             >
                                 <option value="">Select a sub-reason...</option>
                                 {currentSubReasons.map(reason => <option key={reason} value={reason}>{reason}</option>)}
@@ -310,7 +311,7 @@ const DailyEntryPage: React.FC = () => {
                 </div>
             </Modal>
             <Card title="Daily Meal Entry" className="relative overflow-hidden">
-                <div aria-hidden="true" className="absolute -bottom-4 -right-4 text-amber-500/10 dark:text-amber-500/5">
+                <div aria-hidden="true" className="absolute -bottom-4 -right-4 text-sky-500/10 dark:text-sky-500/5">
                     <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M2 12.2c0-3.3 2.9-6.2 6.5-6.2h7c3.6 0 6.5 2.9 6.5 6.2c0 1.9-1.2 3.6-2.7 4.5l-1.5 1c-1.1.7-2.3 1.3-3.3 1.3H9.5c-1 0-2.2-.6-3.3-1.3l-1.5-1C3.2 15.8 2 14.1 2 12.2Z"/>
                         <path d="M6 6s.5 2.2 2.2 2.2"/>
@@ -341,7 +342,7 @@ const DailyEntryPage: React.FC = () => {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="font-semibold">{new Date(today + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long' })}</p>
-                                    <p className="text-sm text-stone-500 dark:text-gray-400">{new Date(today + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">{new Date(today + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}</p>
                                 </div>
                                 <div className="text-right">
                                     {isSunday && selectedDate === today ? (
@@ -353,7 +354,7 @@ const DailyEntryPage: React.FC = () => {
                                             Add / Edit
                                         </Button>
                                     )}
-                                    <button onClick={() => setShowDatePicker(true)} className="block w-full text-center text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 text-xs pt-1">
+                                    <button onClick={() => setShowDatePicker(true)} className="block w-full text-center text-sky-500 hover:text-sky-600 dark:text-sky-400 dark:hover:text-sky-300 text-xs pt-1">
                                         Edit another...
                                     </button>
                                 </div>

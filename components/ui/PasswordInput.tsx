@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 
 // SVG icons for visibility toggle
@@ -28,11 +29,11 @@ const PasswordInput: React.FC<PasswordInputProps> = ({ label, id, containerClass
         setShowPassword(prev => !prev);
     };
 
-    const baseInputClasses = "w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5 placeholder-stone-500 dark:placeholder-gray-400 pr-10";
+    const baseInputClasses = "w-full bg-slate-100/60 dark:bg-slate-700/50 border border-slate-300/50 dark:border-slate-600 text-slate-900 dark:text-white text-sm rounded-lg focus:ring-sky-500 focus:border-sky-500 block p-2.5 placeholder-slate-500 dark:placeholder-slate-400 pr-10";
 
     return (
         <div className={containerClassName}>
-            <label htmlFor={id} className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">
+            <label htmlFor={id} className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
                 {label}
             </label>
             <div className="relative">
@@ -45,7 +46,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({ label, id, containerClass
                 <button
                     type="button"
                     onClick={toggleVisibility}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-stone-500 dark:text-gray-400 hover:text-stone-700 dark:hover:text-white focus:outline-none"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white focus:outline-none"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                     {showPassword ? <EyeSlashIcon /> : <EyeIcon />}

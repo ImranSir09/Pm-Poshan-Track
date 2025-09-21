@@ -48,7 +48,7 @@ const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({ isOpen, onClose, pdfU
     return (
         <div className="fixed inset-0 z-[100] flex flex-col bg-black/80 backdrop-blur-sm p-2 sm:p-4 pdf-preview-container" role="dialog" aria-modal="true" aria-labelledby="pdf-preview-title">
             <div className="flex-shrink-0 flex items-center justify-between pb-2 sm:pb-4 pdf-preview-header">
-                <h3 id="pdf-preview-title" className="text-md sm:text-lg font-bold text-amber-300 truncate pr-2">{filename}</h3>
+                <h3 id="pdf-preview-title" className="text-md sm:text-lg font-bold text-sky-300 truncate pr-2">{filename}</h3>
                 <div className="flex items-center space-x-2">
                     <Button variant="secondary" onClick={onRegenerate} className="!px-3 !py-1.5 text-xs sm:!px-4 sm:!py-2 sm:text-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 hidden sm:inline-block" viewBox="0 0 20 20" fill="currentColor">
@@ -76,7 +76,7 @@ const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({ isOpen, onClose, pdfU
                     </button>
                 </div>
             </div>
-            <div className="flex-grow bg-gray-700 rounded-lg overflow-hidden pdf-preview-content-area">
+            <div className="flex-grow bg-slate-700 rounded-lg overflow-hidden pdf-preview-content-area">
                 <object
                     data={pdfUrl}
                     type="application/pdf"

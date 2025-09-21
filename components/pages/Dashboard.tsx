@@ -1,5 +1,4 @@
 
-
 import React, { useMemo, useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 import Card from '../ui/Card';
@@ -86,15 +85,15 @@ const Dashboard: React.FC = () => {
             // FIX: Check if payload and its properties exist to prevent runtime errors.
             const isSunday = payload[0]?.payload?.date?.getDay() === 0;
             return (
-                <div className="bg-white/80 dark:bg-gray-800/80 p-2 border border-amber-200/50 dark:border-gray-600 rounded text-xs shadow-lg backdrop-blur-sm">
-                    <p className="label text-stone-700 dark:text-gray-300 font-semibold">
+                <div className="bg-white/80 dark:bg-slate-800/80 p-2 border border-slate-200/50 dark:border-slate-600 rounded text-xs shadow-lg backdrop-blur-sm">
+                    <p className="label text-slate-700 dark:text-slate-300 font-semibold">
                         {`Date: ${label}`}
                         {isSunday && <span className="text-red-500 ml-1">(Sunday)</span>}
                     </p>
-                    <p style={{ color: '#a8a29e' }}>{`Balvatika: ${payload[0].value}`}</p>
-                    <p style={{ color: '#f59e0b' }}>{`Primary: ${payload[1].value}`}</p>
-                    <p style={{ color: '#ffc658' }}>{`Middle: ${payload[2].value}`}</p>
-                    <p className="font-bold text-stone-800 dark:text-white">{`Total: ${payload[0].payload.total}`}</p>
+                    <p style={{ color: '#94a3b8' }}>{`Balvatika: ${payload[0].value}`}</p>
+                    <p style={{ color: '#0ea5e9' }}>{`Primary: ${payload[1].value}`}</p>
+                    <p style={{ color: '#2dd4bf' }}>{`Middle: ${payload[2].value}`}</p>
+                    <p className="font-bold text-slate-800 dark:text-white">{`Total: ${payload[0].payload.total}`}</p>
                 </div>
             );
         }
@@ -120,7 +119,7 @@ const Dashboard: React.FC = () => {
             <DailyEntryPage />
 
             <Card title="This Month's Totals" className="relative overflow-hidden">
-                <div aria-hidden="true" className="absolute -bottom-2 -right-2 text-amber-500/10 dark:text-amber-500/5">
+                <div aria-hidden="true" className="absolute -bottom-2 -right-2 text-sky-500/10 dark:text-sky-500/5">
                     <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M10 20.5c0 .8.6 1.5 1.5 1.5h1c.8 0 1.5-.7 1.5-1.5v-1c0-.8-.7-1.5-1.5-1.5h-1c-.8 0-1.5.7-1.5 1.5v1Z"/>
                         <path d="M8 12h.01"/>
@@ -131,22 +130,22 @@ const Dashboard: React.FC = () => {
                 </div>
                 <div className="relative grid grid-cols-3 gap-4 text-center">
                     <div>
-                        <p className="text-xs text-stone-500 dark:text-gray-400">Meal Days</p>
-                        <p className="text-lg font-bold text-amber-700 dark:text-amber-400">{dashboardData.mealDays}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Meal Days</p>
+                        <p className="text-lg font-bold text-sky-700 dark:text-sky-400">{dashboardData.mealDays}</p>
                     </div>
                     <div>
-                        <p className="text-xs text-stone-500 dark:text-gray-400">Total Expenditure</p>
-                        <p className="text-lg font-bold text-amber-700 dark:text-amber-400">₹{dashboardData.totalExpenditure.toFixed(2)}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Total Expenditure</p>
+                        <p className="text-lg font-bold text-sky-700 dark:text-sky-400">₹{dashboardData.totalExpenditure.toFixed(2)}</p>
                     </div>
                     <div>
-                        <p className="text-xs text-stone-500 dark:text-gray-400">Total Rice</p>
-                        <p className="text-lg font-bold text-amber-700 dark:text-amber-400">{dashboardData.totalRice.toFixed(3)} kg</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Total Rice</p>
+                        <p className="text-lg font-bold text-sky-700 dark:text-sky-400">{dashboardData.totalRice.toFixed(3)} kg</p>
                     </div>
                 </div>
             </Card>
             
             <Card title="Daily Attendance" className="relative overflow-hidden">
-                <div aria-hidden="true" className="absolute -bottom-2 -right-2 text-amber-500/10 dark:text-amber-500/5">
+                <div aria-hidden="true" className="absolute -bottom-2 -right-2 text-sky-500/10 dark:text-sky-500/5">
                     <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
                         <circle cx="9" cy="7" r="4"/>
@@ -158,9 +157,9 @@ const Dashboard: React.FC = () => {
                     <div style={{ width: '100%', height: 200 }}>
                         <ResponsiveContainer>
                             <BarChart data={dashboardData.monthlyData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                                <XAxis dataKey="name" interval={0} tick={{ fill: '#78716c', fontSize: 8 }} axisLine={{ stroke: '#d6d3d1' }} tickLine={{ stroke: '#d6d3d1' }} className="dark:tick={{ fill: '#9ca3af' }} dark:axisLine={{ stroke: '#4b5563' }} dark:tickLine={{ stroke: '#4b5563' }}" />
-                                <YAxis tick={{ fill: '#78716c', fontSize: 10 }} axisLine={{ stroke: '#d6d3d1' }} tickLine={{ stroke: '#d6d3d1' }} className="dark:tick={{ fill: '#9ca3af' }} dark:axisLine={{ stroke: '#4b5563' }} dark:tickLine={{ stroke: '#4b5563' }}" />
-                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(180,180,120,0.1)' }} />
+                                <XAxis dataKey="name" interval={0} tick={{ fill: '#64748b', fontSize: 8 }} axisLine={{ stroke: '#e2e8f0' }} tickLine={{ stroke: '#e2e8f0' }} className="dark:tick={{ fill: '#9ca3af' }} dark:axisLine={{ stroke: '#475569' }} dark:tickLine={{ stroke: '#475569' }}" />
+                                <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={{ stroke: '#e2e8f0' }} tickLine={{ stroke: '#e2e8f0' }} className="dark:tick={{ fill: '#9ca3af' }} dark:axisLine={{ stroke: '#475569' }} dark:tickLine={{ stroke: '#475569' }}" />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(14, 165, 233, 0.1)' }} />
 
                                 {/* Add faint reference lines for Sundays with no attendance to make them noticeable */}
                                 {dashboardData.monthlyData.map((entry, index) => {
@@ -170,29 +169,29 @@ const Dashboard: React.FC = () => {
                                     return null;
                                 })}
 
-                                <Bar dataKey="balvatika" stackId="a" fill="#a8a29e" radius={[5, 5, 0, 0]} barSize={10} >
+                                <Bar dataKey="balvatika" stackId="a" fill="#94a3b8" radius={[5, 5, 0, 0]} barSize={10} >
                                      {dashboardData.monthlyData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.date.getDay() === 0 ? '#ef4444' : '#a8a29e'} />
+                                        <Cell key={`cell-${index}`} fill={entry.date.getDay() === 0 ? '#f87171' : '#94a3b8'} />
                                     ))}
                                 </Bar>
-                                <Bar dataKey="primary" stackId="a" fill="#f59e0b" barSize={10}>
+                                <Bar dataKey="primary" stackId="a" fill="#0ea5e9" barSize={10}>
                                     {dashboardData.monthlyData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.date.getDay() === 0 ? '#ef4444' : '#f59e0b'} />
+                                        <Cell key={`cell-${index}`} fill={entry.date.getDay() === 0 ? '#f87171' : '#0ea5e9'} />
                                     ))}
                                 </Bar>
-                                 <Bar dataKey="middle" stackId="a" fill="#ffc658" radius={[5, 5, 0, 0]} barSize={10}>
+                                 <Bar dataKey="middle" stackId="a" fill="#2dd4bf" radius={[5, 5, 0, 0]} barSize={10}>
                                     {dashboardData.monthlyData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.date.getDay() === 0 ? '#ef4444' : '#ffc658'} />
+                                        <Cell key={`cell-${index}`} fill={entry.date.getDay() === 0 ? '#f87171' : '#2dd4bf'} />
                                     ))}
                                  </Bar>
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
-                     <div className="flex justify-center items-center space-x-4 mt-2 text-xs text-stone-600 dark:text-gray-300">
-                        <div className="flex items-center"><div className="w-3 h-3 rounded-full bg-[#a8a29e] mr-1"></div>Balvatika</div>
-                        <div className="flex items-center"><div className="w-3 h-3 rounded-full bg-[#f59e0b] mr-1"></div>Primary</div>
-                        <div className="flex items-center"><div className="w-3 h-3 rounded-full bg-[#ffc658] mr-1"></div>Middle</div>
-                        <div className="flex items-center"><div className="w-3 h-3 rounded-full bg-[#ef4444] mr-1"></div>Sunday</div>
+                     <div className="flex justify-center items-center space-x-4 mt-2 text-xs text-slate-600 dark:text-slate-300">
+                        <div className="flex items-center"><div className="w-3 h-3 rounded-full bg-[#94a3b8] mr-1"></div>Balvatika</div>
+                        <div className="flex items-center"><div className="w-3 h-3 rounded-full bg-[#0ea5e9] mr-1"></div>Primary</div>
+                        <div className="flex items-center"><div className="w-3 h-3 rounded-full bg-[#2dd4bf] mr-1"></div>Middle</div>
+                        <div className="flex items-center"><div className="w-3 h-3 rounded-full bg-[#f87171] mr-1"></div>Sunday</div>
                     </div>
                 </div>
             </Card>

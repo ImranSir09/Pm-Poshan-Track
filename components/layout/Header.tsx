@@ -6,11 +6,12 @@ import { useNotifications } from '../../hooks/useNotifications';
 import NotificationPanel from '../ui/NotificationPanel';
 import { useAuth } from '../../hooks/useAuth';
 
-const SystemIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5 12a1 1 0 102 0V8a1 1 0 10-2 0v4z" /><path fillRule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2-2H5a2 2 0 01-2-2V5zm2-1a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1V5a1 1 0 00-1-1H5z" clipRule="evenodd" /></svg>;
-const SunIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 14.95a1 1 0 010-1.414l.707-.707a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414 0zm.464-10.607a1 1 0 00-1.414 1.414l.707.707a1 1 0 101.414-1.414l-.707-.707zM3 11a1 1 0 100-2H2a1 1 0 100 2h1z" /></svg>;
-const MoonIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" /></svg>;
-const BellIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" /></svg>;
-const LogoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" /></svg>;
+const SystemIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>;
+const SunIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>;
+const MoonIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>;
+const BellIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>;
+const LogoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>;
+const AppIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" viewBox='0 0 100 100' fill='none'><rect width='100' height='100' rx='20' fill='%230284c7'/><path d='M30 70C30 58.9543 38.9543 50 50 50C61.0457 50 70 58.9543 70 70' stroke='white' stroke-width='8' stroke-linecap='round'/><path d='M50 50V30' stroke='white' stroke-width='8' stroke-linecap='round'/><path d='M40 40L50 30L60 40' stroke='white' stroke-width='8' stroke-linecap='round'/></svg>;
 
 const Header: React.FC = () => {
     const { data } = useData();
@@ -48,21 +49,21 @@ const Header: React.FC = () => {
                     aria-hidden="true"
                 />
             )}
-            <header className="relative z-40 flex items-center justify-between p-3 bg-white/80 dark:bg-gray-800/50 backdrop-blur-xl rounded-xl border border-amber-200/50 dark:border-white/20 shadow-md">
+            <header className="relative z-40 flex items-center justify-between p-3 bg-white/80 dark:bg-slate-800/50 backdrop-blur-xl rounded-xl border border-slate-200/50 dark:border-white/20 shadow-md">
                 <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-amber-500 rounded-full">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                    <div className="p-1 bg-sky-600 rounded-lg">
+                        <AppIcon />
                     </div>
                     <div>
-                        <h1 className="text-sm font-bold tracking-tight text-stone-900 dark:text-white">{data.settings.schoolDetails.name}</h1>
-                        <p className="text-xs text-stone-500 dark:text-gray-300">PM POSHAN Tracker</p>
+                        <h1 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">{data.settings.schoolDetails.name}</h1>
+                        <p className="text-xs text-slate-500 dark:text-slate-300">PM Poshan Pro</p>
                     </div>
                 </div>
                 <div className="flex items-center space-x-1 sm:space-x-2">
                     <div className="relative">
                         <button
                             onClick={() => setIsPanelOpen(prev => !prev)}
-                            className="p-2 rounded-full hover:bg-stone-200 dark:hover:bg-gray-700 transition-colors"
+                            className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                             aria-label="Toggle notifications"
                         >
                             <BellIcon />
@@ -87,7 +88,7 @@ const Header: React.FC = () => {
                     </div>
                     <button
                         onClick={toggleTheme}
-                        className="p-2 rounded-full hover:bg-stone-200 dark:hover:bg-gray-700 transition-colors"
+                        className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                         aria-label={themeLabel}
                         title={themeLabel}
                     >
@@ -95,15 +96,15 @@ const Header: React.FC = () => {
                     </button>
                     <button
                         onClick={logout}
-                        className="p-2 rounded-full hover:bg-stone-200 dark:hover:bg-gray-700 transition-colors"
+                        className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                         aria-label="Logout"
                         title="Logout"
                     >
                         <LogoutIcon />
                     </button>
                     <div className="text-right hidden sm:block">
-                        <p className="text-xs font-medium text-stone-700 dark:text-gray-200">{currentTime.toLocaleDateString('en-IN', { weekday: 'long' })}</p>
-                        <p className="text-xs text-stone-500 dark:text-gray-400">{currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
+                        <p className="text-xs font-medium text-slate-700 dark:text-slate-200">{currentTime.toLocaleDateString('en-IN', { weekday: 'long' })}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
                 </div>
             </header>

@@ -13,7 +13,7 @@ const Toast: React.FC<{ message: ToastMessage; onDismiss: (id: string) => void }
     const typeClasses: Record<ToastType, string> = {
         success: 'from-green-500/80 to-green-600/80 border-green-400',
         error: 'from-red-500/80 to-red-600/80 border-red-400',
-        info: 'from-blue-500/80 to-blue-600/80 border-blue-400',
+        info: 'from-sky-500/80 to-sky-600/80 border-sky-400',
     }
 
     return (

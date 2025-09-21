@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
@@ -74,7 +75,7 @@ const Receipts: React.FC = () => {
     return (
         <>
             <Modal isOpen={!!receiptToDelete} onClose={() => setReceiptToDelete(null)} title="Confirm Deletion">
-                <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">Are you sure you want to delete this receipt? This action cannot be undone.</p>
+                <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">Are you sure you want to delete this receipt? This action cannot be undone.</p>
                 <div className="flex justify-end space-x-2">
                     <Button variant="secondary" onClick={() => setReceiptToDelete(null)}>Cancel</Button>
                     <Button variant="danger" onClick={confirmDelete}>Delete</Button>
@@ -83,13 +84,13 @@ const Receipts: React.FC = () => {
             <div className="space-y-4">
                 <Card title="Add New Receipt">
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <p className="text-xs text-stone-500 dark:text-gray-400 -mt-2">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 -mt-2">
                             Log all incoming rice and cash here. These receipts will be added to your stock and reflected in the monthly summary.
                         </p>
                         <Input label="Date" id="receipt-date" type="date" value={date} onChange={e => setDate(e.target.value)} required max={todayString}/>
                         
-                        <fieldset className="border border-amber-300/50 dark:border-gray-600 rounded-lg p-3">
-                            <legend className="text-sm font-medium text-amber-700 dark:text-amber-400 px-1">Rice Received (kg)</legend>
+                        <fieldset className="border border-slate-300/50 dark:border-slate-600 rounded-lg p-3">
+                            <legend className="text-sm font-medium text-sky-700 dark:text-sky-400 px-1">Rice Received (kg)</legend>
                             <div className="grid grid-cols-3 gap-2">
                                 <Input label="Balvatika" id="rice-bal" type="number" step="0.01" placeholder="0" value={rice.balvatika} onChange={e => handleValueChange(setRice, 'balvatika', e.target.value)} min="0" max="9999" />
                                 <Input label="Primary" id="rice-pri" type="number" step="0.01" placeholder="0" value={rice.primary} onChange={e => handleValueChange(setRice, 'primary', e.target.value)} min="0" max="9999" />
@@ -97,8 +98,8 @@ const Receipts: React.FC = () => {
                             </div>
                         </fieldset>
 
-                        <fieldset className="border border-amber-300/50 dark:border-gray-600 rounded-lg p-3">
-                            <legend className="text-sm font-medium text-amber-700 dark:text-amber-400 px-1">Cash Received (₹)</legend>
+                        <fieldset className="border border-slate-300/50 dark:border-slate-600 rounded-lg p-3">
+                            <legend className="text-sm font-medium text-sky-700 dark:text-sky-400 px-1">Cash Received (₹)</legend>
                             <div className="grid grid-cols-3 gap-2">
                                 <Input label="Balvatika" id="cash-bal" type="number" step="0.01" placeholder="0" value={cash.balvatika} onChange={e => handleValueChange(setCash, 'balvatika', e.target.value)} min="0" max="99999" />
                                 <Input label="Primary" id="cash-pri" type="number" step="0.01" placeholder="0" value={cash.primary} onChange={e => handleValueChange(setCash, 'primary', e.target.value)} min="0" max="99999" />
@@ -112,7 +113,7 @@ const Receipts: React.FC = () => {
                 <Card title="Recent Receipts">
                     <div className="overflow-x-auto max-h-60">
                         <table className="w-full text-xs text-left">
-                            <thead className="bg-amber-100/60 dark:bg-gray-800/50 sticky top-0">
+                            <thead className="bg-slate-100/60 dark:bg-slate-800/50 sticky top-0">
                                 <tr>
                                     <th className="p-2">Date</th>
                                     <th className="p-2 text-right">Rice (kg)</th>
@@ -122,8 +123,8 @@ const Receipts: React.FC = () => {
                             </thead>
                             <tbody>
                                 {data.receipts.length === 0 ? (
-                                    <tr className="border-b border-amber-200/50 dark:border-gray-700">
-                                        <td colSpan={4} className="p-4 text-center text-stone-500 dark:text-gray-400">
+                                    <tr className="border-b border-slate-200/50 dark:border-slate-700">
+                                        <td colSpan={4} className="p-4 text-center text-slate-500 dark:text-slate-400">
                                             No receipts have been added yet.
                                         </td>
                                     </tr>
@@ -132,7 +133,7 @@ const Receipts: React.FC = () => {
                                         const totalRice = receipt.rice.balvatika + receipt.rice.primary + receipt.rice.middle;
                                         const totalCash = receipt.cash.balvatika + receipt.cash.primary + receipt.cash.middle;
                                         return (
-                                            <tr key={receipt.id} className="border-b border-amber-200/50 dark:border-gray-700">
+                                            <tr key={receipt.id} className="border-b border-slate-200/50 dark:border-slate-700">
                                                 <td className="p-2">{new Date(receipt.date + 'T00:00:00').toLocaleDateString('en-IN')}</td>
                                                 <td className="p-2 text-right">{totalRice.toFixed(2)}</td>
                                                 <td className="p-2 text-right">{totalCash.toFixed(2)}</td>

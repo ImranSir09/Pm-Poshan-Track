@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
@@ -106,14 +104,14 @@ const SetupPage: React.FC = () => {
     return (
         <>
             <TermsModal isOpen={isTermsModalOpen} onClose={() => setIsTermsModalOpen(false)} />
-            <div className="min-h-screen text-stone-800 dark:text-stone-200 font-sans flex items-center justify-center p-4">
+            <div className="min-h-screen text-slate-800 dark:text-slate-200 font-sans flex items-center justify-center p-4">
                 <div className="fixed top-0 left-0 w-full h-full overflow-hidden">
-                    <div className="animated-blob blob-1 bg-amber-300 dark:bg-amber-900"></div>
-                    <div className="animated-blob blob-2 bg-orange-300 dark:bg-orange-900"></div>
+                    <div className="animated-blob blob-1 bg-sky-300 dark:bg-sky-900"></div>
+                    <div className="animated-blob blob-2 bg-teal-300 dark:bg-teal-900"></div>
                 </div>
                 <div className="w-full max-w-md z-10">
                     <Card title="First-Time Setup">
-                        <p className="text-xs text-stone-600 dark:text-gray-300 mb-4">
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mb-4">
                             Welcome! Please enter your signup key and create an account to secure this application.
                         </p>
                         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
@@ -131,7 +129,7 @@ const SetupPage: React.FC = () => {
                                 {errors.signupKey ? (
                                     <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.signupKey}</p>
                                 ) : (
-                                    <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">This key is provided by the administrator to activate the app.</p>
+                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">This key is provided by the administrator to activate the app.</p>
                                 )}
                             </div>
                             <div>
@@ -147,7 +145,7 @@ const SetupPage: React.FC = () => {
                                  {errors.username ? (
                                     <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.username}</p>
                                 ) : (
-                                    <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">This name will be displayed on the dashboard and used in reports.</p>
+                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">This name will be displayed on the dashboard and used in reports.</p>
                                 )}
                             </div>
                              <div>
@@ -177,7 +175,7 @@ const SetupPage: React.FC = () => {
                                 {errors.password ? (
                                     <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.password}</p>
                                 ) : (
-                                    <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">Use a mix of letters, numbers, and symbols for better security.</p>
+                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Use a mix of letters, numbers, and symbols for better security.</p>
                                 )}
                             </div>
                             <div>
@@ -193,16 +191,16 @@ const SetupPage: React.FC = () => {
                                 {errors.confirmPassword && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.confirmPassword}</p>}
                             </div>
                             
-                            <fieldset className="border border-amber-300/50 dark:border-gray-600 rounded-lg p-3">
-                                <legend className="text-sm font-medium text-amber-700 dark:text-amber-400 px-1">Password Recovery</legend>
+                            <fieldset className="border border-slate-300/50 dark:border-slate-600 rounded-lg p-3">
+                                <legend className="text-sm font-medium text-sky-700 dark:text-sky-400 px-1">Password Recovery</legend>
                                 <div className="space-y-3">
                                     <div>
-                                        <label htmlFor="security-question" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Security Question</label>
+                                        <label htmlFor="security-question" className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Security Question</label>
                                         <select
                                             id="security-question"
                                             value={securityQuestion}
                                             onChange={e => setSecurityQuestion(e.target.value)}
-                                            className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5"
+                                            className="w-full bg-slate-100/60 dark:bg-slate-700/50 border border-slate-300/50 dark:border-slate-600 text-slate-900 dark:text-white text-sm rounded-lg focus:ring-sky-500 focus:border-sky-500 block p-2.5"
                                         >
                                             {SECURITY_QUESTIONS.map(q => <option key={q} value={q}>{q}</option>)}
                                         </select>
@@ -220,7 +218,7 @@ const SetupPage: React.FC = () => {
                                         {errors.securityAnswer ? (
                                             <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.securityAnswer}</p>
                                         ) : (
-                                            <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">This is crucial for recovering your account if you forget your password.</p>
+                                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">This is crucial for recovering your account if you forget your password.</p>
                                         )}
                                     </div>
                                 </div>
@@ -234,14 +232,14 @@ const SetupPage: React.FC = () => {
                                         checked={agreedToTerms}
                                         onChange={e => setAgreedToTerms(e.target.checked)}
                                         onBlur={() => validate('terms')}
-                                        className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                                        className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
                                     />
-                                    <label htmlFor="terms-agree" className="text-xs text-stone-600 dark:text-gray-300">
+                                    <label htmlFor="terms-agree" className="text-xs text-slate-600 dark:text-slate-300">
                                         I have read and agree to the{' '}
                                         <button
                                             type="button"
                                             onClick={() => setIsTermsModalOpen(true)}
-                                            className="font-semibold text-amber-600 hover:underline focus:outline-none"
+                                            className="font-semibold text-sky-600 hover:underline focus:outline-none"
                                         >
                                             Terms and Conditions
                                         </button>
