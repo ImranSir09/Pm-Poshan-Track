@@ -242,7 +242,7 @@ const generateRollStatementPDF = (data: AppData): Blob => {
         if (sectionClasses.length > 0) {
             // NOTE: Casting the cell content object to `any` is a necessary workaround.
             // The `jspdf-autotable` type definitions do not properly include properties like `colSpan`.
-            body.push([{ content: section.title, colSpan: 8, styles: { fontStyle: 'bold', fillColor: [254, 243, 199] } } as any]);
+            body.push([{ content: section.title, colSpan: 8, styles: { fontStyle: 'bold', fillColor: [240, 240, 240], textColor: [0, 0, 0] } } as any]);
             
             sectionClasses.forEach(cr => {
                 const totalBoys = cr.general.boys + cr.stsc.boys;
@@ -260,7 +260,7 @@ const generateRollStatementPDF = (data: AppData): Blob => {
                 { content: sectionTotals.stscG, styles: { fontStyle: 'bold' } },
                 { content: sectionTotals.totalB, styles: { fontStyle: 'bold' } },
                 { content: sectionTotals.totalG, styles: { fontStyle: 'bold' } },
-                { content: sectionTotals.onRoll, styles: { fontStyle: 'bold', fillColor: [252, 211, 77] } },
+                { content: sectionTotals.onRoll, styles: { fontStyle: 'bold', fillColor: [200, 200, 200], textColor: [0, 0, 0] } },
             ]);
             
             grandTotal.genB += sectionTotals.genB;
@@ -281,7 +281,7 @@ const generateRollStatementPDF = (data: AppData): Blob => {
         body: body,
         foot: foot,
         theme: 'grid', styles: { fontSize: 9, cellPadding: 2 },
-        headStyles: { fillColor: [245, 158, 11] }, footStyles: { fillColor: [252, 211, 77] },
+        headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0] }, footStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0] },
     });
 
     addSignatureBlock(doc, settings, doc.lastAutoTable.finalY);
@@ -365,7 +365,7 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
                  // NOTE: Casting the cell content object to `any` is a necessary workaround.
                  // The `jspdf-autotable` type definitions do not properly include properties like `colSpan`.
                  body.push([
-                    { content: `${new Date(entry.date + 'T00:00:00').toLocaleDateString('en-IN')} - ${entry.reasonForNoMeal || 'No Meal Served'}`, colSpan: 11, styles: { halign: 'center', fontStyle: 'italic', textColor: [255, 0, 0] } } as any
+                    { content: `${new Date(entry.date + 'T00:00:00').toLocaleDateString('en-IN')} - ${entry.reasonForNoMeal || 'No Meal Served'}`, colSpan: 11, styles: { halign: 'center', fontStyle: 'italic', textColor: [0, 0, 0] } } as any
                 ]);
             }
         });
@@ -379,8 +379,8 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
             foot: foot,
             theme: 'grid',
             styles: { fontSize: 8, cellPadding: 1.5, overflow: 'linebreak' },
-            headStyles: { fillColor: [245, 158, 11] },
-            footStyles: { fillColor: [252, 211, 77] },
+            headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0] },
+            footStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0] },
         });
 
         const mainTableFinalY = doc.lastAutoTable.finalY;
@@ -414,7 +414,7 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
             tableWidth: tableWidth,
             margin: { left: margin },
             styles: { fontSize: 8, cellPadding: 1.5, halign: 'right' },
-            headStyles: { halign: 'center', fillColor: [254, 249, 195] },
+            headStyles: { halign: 'center', fillColor: [240, 240, 240], textColor: [0, 0, 0] },
             columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
         });
 
@@ -435,7 +435,7 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
             tableWidth: tableWidth,
             margin: { left: margin + tableWidth + gap },
             styles: { fontSize: 8, cellPadding: 1.5, halign: 'right' },
-            headStyles: { halign: 'center', fillColor: [254, 249, 195] },
+            headStyles: { halign: 'center', fillColor: [240, 240, 240], textColor: [0, 0, 0] },
             columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
         });
         
@@ -648,8 +648,8 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
         foot: foot,
         theme: 'grid',
         styles: { fontSize: 8, cellPadding: 1.5, halign: 'right' },
-        headStyles: { fillColor: [245, 158, 11], halign: 'center', fontSize: 8 },
-        footStyles: { fillColor: [252, 211, 77] },
+        headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], halign: 'center', fontSize: 8 },
+        footStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0] },
         columnStyles: { 
             0: { halign: 'left', fontStyle: 'bold' },
             1: { halign: 'left' } 
