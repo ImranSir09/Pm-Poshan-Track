@@ -43,6 +43,18 @@ export const DEFAULT_SETTINGS: Settings = {
         salt: { balvatika: 0.80, primary: 0.80, middle: 1.00 },
         fuel: { balvatika: 1.38, primary: 1.38, middle: 1.77 },
     },
+    ratesHistory: [
+        {
+            effectiveDate: '1970-01-01',
+            rates: {
+                rice: { balvatika: 100, primary: 100, middle: 150 }, // in grams
+                dalVeg: { balvatika: 3.50, primary: 3.50, middle: 5.40 },
+                oilCond: { balvatika: 1.10, primary: 1.10, middle: 2.00 },
+                salt: { balvatika: 0.80, primary: 0.80, middle: 1.00 },
+                fuel: { balvatika: 1.38, primary: 1.38, middle: 1.77 },
+            }
+        }
+    ],
     autoOverwrite: false,
     cooks: [],
     healthStatus: {

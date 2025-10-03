@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../ui/Card';
 import { useData } from '../../hooks/useData';
 import { Category, AbstractData, DailyEntry, Rates, AppData } from '../../types';
-import { calculateMonthlySummary, getRollsForDate, getOpeningBalanceInfo, getNextMonthKey } from '../../services/summaryCalculator';
+import { calculateMonthlySummary, getRollsForDate, getOpeningBalanceInfo, getNextMonthKey, getRatesForDate } from '../../services/summaryCalculator';
 import Button from '../ui/Button';
 
 const AbstractTable: React.FC<{ title: string; data: Record<Category, AbstractData>; unit: string; decimals: number; }> = ({ title, data, unit, decimals }) => {
@@ -148,9 +148,8 @@ const SimpleDailyEntriesTable: React.FC<{ entries: any[] }> = ({ entries }) => (
 const DetailedConsumptionTable: React.FC<{
     entries: DailyEntry[];
     category: Category;
-    rates: Rates;
     appData: AppData;
-}> = ({ entries, category, rates, appData }) => {
+}> = ({ entries, category, appData }) => {
     
     const { dailyData, totals } = useMemo(() => {
         const data = entries.map((entry, index) => {
@@ -169,6 +168,9 @@ const DetailedConsumptionTable: React.FC<{
                     onRollForDay += classTotal;
                 }
             });
+            
+            // Get the historically accurate rates for this specific day
+            const rates = getRatesForDate(appData, entry.date);
 
             const riceUsed = mealServed ? (present * rates.rice[category]) / 1000 : 0;
             const dalVeg = mealServed ? present * rates.dalVeg[category] : 0;
@@ -205,7 +207,7 @@ const DetailedConsumptionTable: React.FC<{
         }, { present: 0, riceUsed: 0, dalVeg: 0, oilCond: 0, salt: 0, fuel: 0, totalCost: 0 });
 
         return { dailyData: data, totals };
-    }, [entries, category, rates, appData]);
+    }, [entries, category, appData]);
 
     const thClasses = "p-2 whitespace-nowrap";
     const tdClasses = "p-2 whitespace-nowrap";
@@ -447,7 +449,6 @@ const MonthlySummary: React.FC = () => {
                                     <DetailedConsumptionTable
                                         entries={monthEntries}
                                         category={view}
-                                        rates={settings.rates}
                                         appData={data}
                                     />
                                 )}

@@ -8,7 +8,7 @@ import { useToast } from '../../hooks/useToast';
 import Modal from '../ui/Modal';
 import NumberInput from '../ui/NumberInput';
 import Input from '../ui/Input';
-import { getRollsForDate } from '../../services/summaryCalculator';
+import { getRollsForDate, getRatesForDate } from '../../services/summaryCalculator';
 
 const NO_MEAL_REASONS_STRUCTURED = {
   "Foodgrains not Available": [
@@ -49,7 +49,6 @@ const DailyEntryPage: React.FC = () => {
     const { data, addEntry } = useData();
     const { showToast } = useToast();
     const { settings } = data;
-    const { rates } = settings;
     
     const today = useMemo(() => {
         const d = new Date();
@@ -101,6 +100,8 @@ const DailyEntryPage: React.FC = () => {
     }, []);
     
     const calculateConsumption = useCallback(() => {
+        const rates = getRatesForDate(data, selectedDate);
+
         const balvatikaRice = (present.balvatika * rates.rice.balvatika) / 1000;
         const primaryRice = (present.primary * rates.rice.primary) / 1000;
         const middleRice = (present.middle * rates.rice.middle) / 1000;
@@ -121,7 +122,7 @@ const DailyEntryPage: React.FC = () => {
             fuel: parseFloat(fuel.toFixed(2)),
             total: parseFloat(totalExpenditure.toFixed(2)),
         });
-    }, [present, rates]);
+    }, [present, data, selectedDate]);
 
     useEffect(() => {
         calculateConsumption();

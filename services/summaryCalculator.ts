@@ -1,5 +1,5 @@
-import { AppData, MonthlyBalanceData, Category, AbstractData, ClassRoll } from '../types';
-import { DEFAULT_SETTINGS } from '../constants';
+
+import { AppData, MonthlyBalanceData, Category, AbstractData, ClassRoll, Rates } from '../types';
 
 export const getRollsForDate = (data: AppData, date: string): ClassRoll[] => {
     const history = data.rollStatementHistory || [];
@@ -14,6 +14,23 @@ export const getRollsForDate = (data: AppData, date: string): ClassRoll[] => {
 
     return applicableStatement ? applicableStatement.classRolls : sortedHistory[sortedHistory.length - 1].classRolls; // Fallback to the oldest entry if date is before all entries
 };
+
+export const getRatesForDate = (data: AppData, date: string): Rates => {
+    const history = data.settings.ratesHistory || [];
+    
+    // Fallback to current rates if history is somehow empty
+    if (history.length === 0) {
+        return data.settings.rates;
+    }
+
+    const sortedHistory = [...history].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
+
+    const applicableStatement = sortedHistory.find(entry => entry.effectiveDate <= date);
+
+    // Fallback to the oldest entry if date is before all entries, or current if nothing found
+    return applicableStatement ? applicableStatement.rates : (sortedHistory[sortedHistory.length - 1]?.rates || data.settings.rates);
+};
+
 
 export const getRollsForMonth = (data: AppData, monthKey: string): ClassRoll[] => {
     const [year, month] = monthKey.split('-').map(Number);
@@ -58,8 +75,6 @@ export const getNextMonthKey = (monthKey: string): string => {
 
 export const calculateMonthlySummary = (data: AppData, selectedMonth: string) => {
     const entries = data.entries.filter(e => e.date.startsWith(selectedMonth));
-    // FIX: Add a fallback to default rates to prevent calculation errors if settings are corrupted or missing.
-    const rates = data.settings.rates || DEFAULT_SETTINGS.rates;
     const categories: Category[] = ['balvatika', 'primary', 'middle'];
     
     // FIX: Use the new helper to get both the opening balance and the month it corresponds to.
@@ -99,6 +114,7 @@ export const calculateMonthlySummary = (data: AppData, selectedMonth: string) =>
     };
 
     entries.forEach(entry => {
+        const rates = getRatesForDate(data, entry.date);
         categories.forEach(cat => {
             const present = entry.present[cat] || 0;
             categoryTotals.present[cat] += present;

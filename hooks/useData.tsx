@@ -103,6 +103,34 @@ const getInitialData = (): AppData => {
                 dataToProcess.rollStatementHistory = [];
             }
             
+            // MIGRATION: Create rate history if it doesn't exist from the single rates object.
+            if (dataToProcess.settings?.rates && (!dataToProcess.settings.ratesHistory || dataToProcess.settings.ratesHistory.length === 0)) {
+                dataToProcess.settings.ratesHistory = [
+                    {
+                        effectiveDate: '1970-01-01',
+                        rates: JSON.parse(JSON.stringify(dataToProcess.settings.rates)) // deep copy
+                    }
+                ];
+            }
+            if (!dataToProcess.settings.ratesHistory) {
+                dataToProcess.settings.ratesHistory = [];
+            }
+            
+            // SYNC: Ensure `settings.rates` is always synchronized with the latest from history
+            if (dataToProcess.settings.ratesHistory.length > 0) {
+                const sortedRatesHistory = [...dataToProcess.settings.ratesHistory].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
+                dataToProcess.settings.rates = sortedRatesHistory[0].rates;
+            }
+            
+            // SYNC: Ensure `settings.classRolls` is always synchronized with the latest from history.
+            if (dataToProcess.rollStatementHistory && dataToProcess.rollStatementHistory.length > 0) {
+                const sortedRollsHistory = [...dataToProcess.rollStatementHistory].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
+                if (sortedRollsHistory[0].classRolls) {
+                    dataToProcess.settings.classRolls = sortedRollsHistory[0].classRolls;
+                }
+            }
+
+
             // Migration for welcome screen: if user exists but flag is missing, assume they don've need to see it.
             if (dataToProcess.auth?.password && typeof dataToProcess.welcomeScreenShown === 'undefined') {
                 dataToProcess.welcomeScreenShown = true;
@@ -204,34 +232,51 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const updateSettings = useCallback((newSettings: Settings) => {
         setData(prevData => {
-            const currentHistory = prevData.rollStatementHistory || [];
-            
-            // Find the most recent entry by sorting
-            const sortedHistory = [...currentHistory].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
-            const latestHistoryEntry = sortedHistory.length > 0 ? sortedHistory[0] : null;
+            // === RATE HISTORY LOGIC ===
+            const currentRatesHistory = prevData.settings.ratesHistory || [];
+            const sortedRatesHistory = [...currentRatesHistory].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
+            const latestRatesEntry = sortedRatesHistory.length > 0 ? sortedRatesHistory[0] : null;
+            const hasRatesChanged = !latestRatesEntry || JSON.stringify(latestRatesEntry.rates) !== JSON.stringify(newSettings.rates);
 
-            const hasRollsChanged = !latestHistoryEntry || JSON.stringify(latestHistoryEntry.classRolls) !== JSON.stringify(newSettings.classRolls);
+            let updatedRatesHistory = currentRatesHistory;
+            if (hasRatesChanged) {
+                const today = new Date();
+                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                const todayEntryIndex = updatedRatesHistory.findIndex(entry => entry.effectiveDate === todayStr);
 
-            let updatedHistory = currentHistory;
+                if (todayEntryIndex !== -1) {
+                    updatedRatesHistory = updatedRatesHistory.map((entry, index) =>
+                        index === todayEntryIndex ? { ...entry, rates: newSettings.rates } : entry
+                    );
+                } else {
+                    updatedRatesHistory = [...updatedRatesHistory, { effectiveDate: todayStr, rates: newSettings.rates }];
+                }
+            }
+            // === END RATE HISTORY LOGIC ===
 
+            // === ROLL HISTORY LOGIC ===
+            const currentRollHistory = prevData.rollStatementHistory || [];
+            const sortedRollHistory = [...currentRollHistory].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
+            const latestRollHistoryEntry = sortedRollHistory.length > 0 ? sortedRollHistory[0] : null;
+            const hasRollsChanged = !latestRollHistoryEntry || JSON.stringify(latestRollHistoryEntry.classRolls) !== JSON.stringify(newSettings.classRolls);
+
+            let updatedRollHistory = currentRollHistory;
             if (hasRollsChanged) {
                 const today = new Date();
                 const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
                 
-                const todayEntryIndex = currentHistory.findIndex(entry => entry.effectiveDate === todayStr);
+                const todayEntryIndex = currentRollHistory.findIndex(entry => entry.effectiveDate === todayStr);
 
                 if (todayEntryIndex !== -1) {
-                    // An entry for today already exists, update it immutably
-                    updatedHistory = currentHistory.map((entry, index) => {
+                    updatedRollHistory = currentRollHistory.map((entry, index) => {
                         if (index === todayEntryIndex) {
                             return { ...entry, classRolls: newSettings.classRolls };
                         }
                         return entry;
                     });
                 } else {
-                    // No entry for today, add a new one
-                    updatedHistory = [
-                        ...currentHistory,
+                    updatedRollHistory = [
+                        ...currentRollHistory,
                         {
                             effectiveDate: todayStr,
                             classRolls: newSettings.classRolls
@@ -239,8 +284,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     ];
                 }
             }
+            // === END ROLL HISTORY LOGIC ===
 
-            return { ...prevData, settings: newSettings, rollStatementHistory: updatedHistory };
+            const finalSettings = {
+                ...newSettings,
+                ratesHistory: updatedRatesHistory,
+            };
+
+            return { ...prevData, settings: finalSettings, rollStatementHistory: updatedRollHistory };
         });
     }, []);
     

@@ -29,6 +29,11 @@ export interface Rates {
     fuel: { balvatika: number; primary: number; middle: number };
 }
 
+export interface RateHistoryEntry {
+  effectiveDate: string; // YYYY-MM-DD
+  rates: Rates;
+}
+
 export interface ClassRoll {
     id: string; // e.g., 'c1', 'c2'
     name: string; // e.g., '1st', '2nd'
@@ -102,6 +107,7 @@ export interface Settings {
     schoolDetails: SchoolDetails;
     classRolls: ClassRoll[];
     rates: Rates;
+    ratesHistory?: RateHistoryEntry[];
     autoOverwrite: boolean;
     cooks: CookCumHelper[];
     healthStatus: HealthStatus;
