@@ -42,6 +42,11 @@ export interface ClassRoll {
     };
 }
 
+export interface RollStatementHistoryEntry {
+  effectiveDate: string; // YYYY-MM-DD
+  classRolls: ClassRoll[];
+}
+
 export interface SchoolDetails {
     name: string;
     udise: string;
@@ -166,6 +171,7 @@ export interface AppData {
     entries: DailyEntry[];
     receipts: Receipt[];
     monthlyBalances: MonthlyBalance;
+    rollStatementHistory?: RollStatementHistoryEntry[];
     lastBackupDate?: string; // ISO string
     welcomeScreenShown?: boolean;
 }

@@ -1,9 +1,8 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../ui/Card';
 import { useData } from '../../hooks/useData';
-import { Category, AbstractData, DailyEntry, Rates } from '../../types';
-import { calculateMonthlySummary } from '../../services/summaryCalculator';
+import { Category, AbstractData, DailyEntry, Rates, AppData } from '../../types';
+import { calculateMonthlySummary, getRollsForDate, getOpeningBalanceInfo, getNextMonthKey } from '../../services/summaryCalculator';
 import Button from '../ui/Button';
 
 const AbstractTable: React.FC<{ title: string; data: Record<Category, AbstractData>; unit: string; decimals: number; }> = ({ title, data, unit, decimals }) => {
@@ -150,14 +149,27 @@ const DetailedConsumptionTable: React.FC<{
     entries: DailyEntry[];
     category: Category;
     rates: Rates;
-    onRoll: number;
-}> = ({ entries, category, rates, onRoll }) => {
+    appData: AppData;
+}> = ({ entries, category, rates, appData }) => {
     
     const { dailyData, totals } = useMemo(() => {
         const data = entries.map((entry, index) => {
             const present = entry.present[category];
             const mealServed = present > 0;
             
+            const rollsForDay = getRollsForDate(appData, entry.date);
+            let onRollForDay = 0;
+            rollsForDay.forEach(c => {
+                const classTotal = c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls;
+                if (category === 'balvatika' && ['bal', 'pp1', 'pp2'].includes(c.id)) {
+                    onRollForDay += classTotal;
+                } else if (category === 'primary' && ['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)) {
+                    onRollForDay += classTotal;
+                } else if (category === 'middle' && ['c6', 'c7', 'c8'].includes(c.id)) {
+                    onRollForDay += classTotal;
+                }
+            });
+
             const riceUsed = mealServed ? (present * rates.rice[category]) / 1000 : 0;
             const dalVeg = mealServed ? present * rates.dalVeg[category] : 0;
             const oilCond = mealServed ? present * rates.oilCond[category] : 0;
@@ -168,6 +180,7 @@ const DetailedConsumptionTable: React.FC<{
             return {
                 sNo: index + 1,
                 date: entry.date,
+                onRoll: onRollForDay,
                 present: present,
                 riceUsed,
                 dalVeg,
@@ -192,7 +205,7 @@ const DetailedConsumptionTable: React.FC<{
         }, { present: 0, riceUsed: 0, dalVeg: 0, oilCond: 0, salt: 0, fuel: 0, totalCost: 0 });
 
         return { dailyData: data, totals };
-    }, [entries, category, rates]);
+    }, [entries, category, rates, appData]);
 
     const thClasses = "p-2 whitespace-nowrap";
     const tdClasses = "p-2 whitespace-nowrap";
@@ -230,7 +243,7 @@ const DetailedConsumptionTable: React.FC<{
                                     <>
                                         <td className={tdClasses}>{day.sNo}</td>
                                         <td className={tdClasses}>{new Date(day.date + 'T00:00:00').toLocaleDateString('en-IN')}</td>
-                                        <td className={`${tdClasses} text-right`}>{onRoll}</td>
+                                        <td className={`${tdClasses} text-right`}>{day.onRoll}</td>
                                         <td className={`${tdClasses} text-right`}>{day.present}</td>
                                         <td className={`${tdClasses} text-right`}>{day.riceUsed.toFixed(3)}</td>
                                         <td className={`${tdClasses} text-right`}>{day.dalVeg.toFixed(2)}</td>
@@ -270,36 +283,31 @@ const MonthlySummary: React.FC = () => {
     const [isDetailsVisible, setIsDetailsVisible] = useState(false);
     const { settings } = data;
 
+    const currentMonthKey = useMemo(() => new Date().toISOString().slice(0, 7), []);
+
     const summaryData = useMemo(
         () => calculateMonthlySummary(data, selectedMonth),
-        [data.entries, data.receipts, data.monthlyBalances, data.settings, selectedMonth] // More specific dependencies
+        [data, selectedMonth]
     );
     
     const { monthEntries, riceAbstracts, cashAbstracts, totals, categoryTotals, closingBalance } = summaryData;
     
-    const onRoll = useMemo(() => {
-        const totals = { balvatika: 0, primary: 0, middle: 0 };
-        if (!settings.classRolls) return totals;
-
-        settings.classRolls.forEach(c => {
-            const classTotal = c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls;
-            if (['bal', 'pp1', 'pp2'].includes(c.id)) {
-                totals.balvatika += classTotal;
-            } else if (['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)) {
-                totals.primary += classTotal;
-            } else if (['c6', 'c7', 'c8'].includes(c.id)) {
-                totals.middle += classTotal;
-            }
-        });
-        return totals;
-    }, [settings.classRolls]);
+    // FIX: This effect now depends on month-specific data (entries, receipts) instead of the calculated
+    // closing balance. This prevents it from running and overwriting historical balance snapshots
+    // when global settings (like food rates) are changed. It will only run if data for the relevant
+    // period is actually modified.
+    const relevantReceipts = useMemo(() => {
+        const { lastBalanceMonth } = getOpeningBalanceInfo(data, selectedMonth);
+        const receiptStartDate = lastBalanceMonth ? getNextMonthKey(lastBalanceMonth) : '0000-00';
+        return data.receipts.filter(r => r.date.substring(0, 7) >= receiptStartDate && r.date.substring(0, 7) <= selectedMonth);
+    }, [data.receipts, data.monthlyBalances, selectedMonth]);
 
     useEffect(() => {
         if (closingBalance && monthEntries.length > 0) {
             saveMonthlyBalance(selectedMonth, closingBalance);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedMonth, closingBalance]); // Intentionally omitting saveMonthlyBalance
+    }, [selectedMonth, monthEntries, relevantReceipts]); // Intentionally omitting saveMonthlyBalance & closingBalance
 
     useEffect(() => {
         setIsDetailsVisible(false);
@@ -308,6 +316,16 @@ const MonthlySummary: React.FC = () => {
     const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSelectedMonth(e.target.value);
     };
+
+    const handleMonthNavigation = (offset: number) => {
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const date = new Date(Date.UTC(year, month - 1, 15)); // Use mid-month to avoid timezone day shifts
+        date.setUTCMonth(date.getUTCMonth() + offset);
+        const newMonthKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+        setSelectedMonth(newMonthKey);
+    };
+
+    const isNextMonthDisabled = selectedMonth >= currentMonthKey;
 
     const displayedTotals = useMemo(() => {
         if (view === 'overall') {
@@ -341,16 +359,24 @@ const MonthlySummary: React.FC = () => {
     return (
         <div className="space-y-4">
             <Card title="Monthly Summary">
-                <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="flex-1">
+                <div className="flex flex-col sm:flex-row gap-4 items-end">
+                    <div className="flex-grow">
                         <label htmlFor="month-select" className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Select Month</label>
-                        <input
-                            id="month-select"
-                            type="month"
-                            value={selectedMonth}
-                            onChange={handleMonthChange}
-                            className="w-full bg-slate-100/60 dark:bg-slate-700/50 border border-slate-300/50 dark:border-slate-600 text-slate-800 dark:text-white text-sm rounded-lg p-2.5 focus:ring-sky-500 focus:border-sky-500"
-                        />
+                        <div className="flex items-center">
+                            <Button variant="secondary" onClick={() => handleMonthNavigation(-1)} className="!rounded-r-none !px-3" aria-label="Previous month">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                            </Button>
+                            <input
+                                id="month-select"
+                                type="month"
+                                value={selectedMonth}
+                                onChange={handleMonthChange}
+                                className="w-full bg-slate-100/60 dark:bg-slate-700/50 border-y border-slate-300/50 dark:border-slate-600 text-slate-800 dark:text-white text-sm p-2.5 focus:ring-sky-500 focus:border-sky-500 rounded-none"
+                            />
+                             <Button variant="secondary" onClick={() => handleMonthNavigation(1)} disabled={isNextMonthDisabled} className="!rounded-l-none !px-3" aria-label="Next month">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
+                            </Button>
+                        </div>
                     </div>
                      <div className="flex-1">
                         <label htmlFor="view-select" className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">View</label>
@@ -422,7 +448,7 @@ const MonthlySummary: React.FC = () => {
                                         entries={monthEntries}
                                         category={view}
                                         rates={settings.rates}
-                                        onRoll={onRoll[view]}
+                                        appData={data}
                                     />
                                 )}
                                 <Button onClick={() => setIsDetailsVisible(false)} className="w-full mt-4" variant="secondary">

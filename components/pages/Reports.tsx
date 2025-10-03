@@ -7,14 +7,14 @@ import Modal from '../ui/Modal';
 import { Category, CookCumHelper, InspectionAuthority, InspectionReport, Settings } from '../../types';
 import PDFPreviewModal from '../ui/PDFPreviewModal';
 import { generatePDFReport } from '../../services/pdfGenerator';
-import { calculateMonthlySummary } from '../../services/summaryCalculator';
+import { calculateMonthlySummary, getRollsForMonth } from '../../services/summaryCalculator';
 import { Accordion, AccordionItem } from '../ui/Accordion';
 import Input from '../ui/Input';
 import NumberInput from '../ui/NumberInput';
 
 const reportDescriptions: Record<string, string> = {
     mdcf: "Generates the official Monthly Data Collection Format (MDCF) required for reporting.",
-    roll_statement: "Creates a summary of student enrollment numbers by class and social category.",
+    roll_statement: "Creates a summary of student enrollment numbers by class and social category for the selected month.",
     daily_consumption: "Produces a detailed, register-style log of daily meals, attendance, and expenditure for the selected month.",
     rice_requirement: "Generates a formal certificate for the monthly rice requirement based on enrollment and working days.",
     yearly_consumption_detailed: "A comprehensive yearly report with category-wise monthly breakdowns of consumption, stock, and funds."
@@ -91,13 +91,14 @@ const Reports: React.FC = () => {
                  newSummary = { 'Report': 'Daily Consumption Register', 'For Month': monthName, 'Total Meal Days': monthEntries.filter(e => e.totalPresent > 0).length, 'Rice Consumed': `${totals.rice.toFixed(3)} kg`, 'Total Expenditure': `₹${totals.expenditure.toFixed(2)}` };
                 break;
             case 'roll_statement':
-                const totalEnrollment = data.settings.classRolls.reduce((sum, c) => sum + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0);
-                newSummary = { 'Report': 'Roll Statement', 'Total Enrollment': totalEnrollment };
+                const rollsForMonth = getRollsForMonth(data, selectedMonth);
+                const totalEnrollment = rollsForMonth.reduce((sum, c) => sum + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0);
+                newSummary = { 'Report': 'Roll Statement', 'For Month': monthName, 'Total Enrollment': totalEnrollment };
                 break;
             case 'rice_requirement':
                  const workingDays = monthEntries.filter(e => e.totalPresent > 0).length;
-                 const enrollment = data.settings.classRolls.reduce((sum, c) => sum + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0);
-                 const totalRiceKg = data.settings.classRolls.reduce((total, c) => {
+                 const enrollment = getRollsForMonth(data, selectedMonth).reduce((sum, c) => sum + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0);
+                 const totalRiceKg = getRollsForMonth(data, selectedMonth).reduce((total, c) => {
                      let cat: Category | null = null;
                      if (['bal', 'pp1', 'pp2'].includes(c.id)) cat = 'balvatika';
                      else if (['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)) cat = 'primary';
@@ -169,7 +170,7 @@ const Reports: React.FC = () => {
         setMdcfData(prev => prev ? ({ ...prev, cooks: prev.cooks?.map(cook => cook.id === id ? { ...cook, [field]: value } : cook) }) : null);
     };
 
-    const needsMonth = !['roll_statement', 'yearly_consumption_detailed'].includes(reportType);
+    const needsMonth = !['yearly_consumption_detailed'].includes(reportType);
     const needsYear = ['yearly_consumption_detailed'].includes(reportType);
 
     return (

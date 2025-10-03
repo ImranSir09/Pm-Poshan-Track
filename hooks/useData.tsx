@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { AppData, DailyEntry, Receipt, Settings, MonthlyBalanceData, MonthlyBalance, InspectionAuthority, AuthData } from '../types';
 import { DEFAULT_SETTINGS } from '../constants';
@@ -36,6 +35,7 @@ const getInitialData = (): AppData => {
         entries: [],
         receipts: [],
         monthlyBalances: {},
+        rollStatementHistory: [],
         lastBackupDate: undefined,
         welcomeScreenShown: false,
     };
@@ -89,6 +89,18 @@ const getInitialData = (): AppData => {
                     }
                 });
                 dataToProcess.monthlyBalances = migratedBalances;
+            }
+             // MIGRATION: Create roll statement history if it doesn't exist
+            if ((!dataToProcess.rollStatementHistory || dataToProcess.rollStatementHistory.length === 0) && dataToProcess.settings?.classRolls) {
+                dataToProcess.rollStatementHistory = [
+                    {
+                        effectiveDate: '1970-01-01', // A date in the distant past
+                        classRolls: JSON.parse(JSON.stringify(dataToProcess.settings.classRolls)) // deep copy
+                    }
+                ];
+            }
+             if (!dataToProcess.rollStatementHistory) {
+                dataToProcess.rollStatementHistory = [];
             }
             
             // Migration for welcome screen: if user exists but flag is missing, assume they don've need to see it.
@@ -190,8 +202,46 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }));
     }, []);
 
-    const updateSettings = useCallback((settings: Settings) => {
-        setData(prevData => ({ ...prevData, settings }));
+    const updateSettings = useCallback((newSettings: Settings) => {
+        setData(prevData => {
+            const currentHistory = prevData.rollStatementHistory || [];
+            
+            // Find the most recent entry by sorting
+            const sortedHistory = [...currentHistory].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
+            const latestHistoryEntry = sortedHistory.length > 0 ? sortedHistory[0] : null;
+
+            const hasRollsChanged = !latestHistoryEntry || JSON.stringify(latestHistoryEntry.classRolls) !== JSON.stringify(newSettings.classRolls);
+
+            let updatedHistory = currentHistory;
+
+            if (hasRollsChanged) {
+                const today = new Date();
+                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                
+                const todayEntryIndex = currentHistory.findIndex(entry => entry.effectiveDate === todayStr);
+
+                if (todayEntryIndex !== -1) {
+                    // An entry for today already exists, update it immutably
+                    updatedHistory = currentHistory.map((entry, index) => {
+                        if (index === todayEntryIndex) {
+                            return { ...entry, classRolls: newSettings.classRolls };
+                        }
+                        return entry;
+                    });
+                } else {
+                    // No entry for today, add a new one
+                    updatedHistory = [
+                        ...currentHistory,
+                        {
+                            effectiveDate: todayStr,
+                            classRolls: newSettings.classRolls
+                        }
+                    ];
+                }
+            }
+
+            return { ...prevData, settings: newSettings, rollStatementHistory: updatedHistory };
+        });
     }, []);
     
     const updateAuth = useCallback((authData: AuthData) => {

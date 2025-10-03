@@ -1,5 +1,27 @@
-import { AppData, MonthlyBalanceData, Category, AbstractData } from '../types';
+import { AppData, MonthlyBalanceData, Category, AbstractData, ClassRoll } from '../types';
 import { DEFAULT_SETTINGS } from '../constants';
+
+export const getRollsForDate = (data: AppData, date: string): ClassRoll[] => {
+    const history = data.rollStatementHistory || [];
+    
+    if (history.length === 0) {
+        return data.settings.classRolls; // Fallback to current settings
+    }
+
+    const sortedHistory = [...history].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
+
+    const applicableStatement = sortedHistory.find(entry => entry.effectiveDate <= date);
+
+    return applicableStatement ? applicableStatement.classRolls : sortedHistory[sortedHistory.length - 1].classRolls; // Fallback to the oldest entry if date is before all entries
+};
+
+export const getRollsForMonth = (data: AppData, monthKey: string): ClassRoll[] => {
+    const [year, month] = monthKey.split('-').map(Number);
+    const lastDayOfMonth = new Date(year, month, 0); // Day 0 of next month is last day of current month
+    const lastDayOfMonthStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDayOfMonth.getDate()).padStart(2, '0')}`;
+    return getRollsForDate(data, lastDayOfMonthStr);
+};
+
 
 // FIX: Replaced getOpeningBalanceForMonth with a more robust function that also returns
 // the key of the last saved month. This is crucial for correctly calculating receipts
@@ -23,8 +45,8 @@ export const getOpeningBalanceInfo = (data: AppData, selectedMonth: string): { b
     };
 };
 
-// NEW: Helper to get the next month's key string (e.g., '2024-05' -> '2024-06')
-const getNextMonthKey = (monthKey: string): string => {
+// Helper to get the next month's key string (e.g., '2024-05' -> '2024-06')
+export const getNextMonthKey = (monthKey: string): string => {
     const [year, month] = monthKey.split('-').map(Number);
     // Use UTC to avoid timezone-related issues when incrementing month.
     const date = new Date(Date.UTC(year, month - 1, 1));

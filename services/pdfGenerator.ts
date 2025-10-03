@@ -1,5 +1,5 @@
 import { AppData, Category, ClassRoll, Settings } from '../types';
-import { calculateMonthlySummary, getOpeningBalanceInfo } from './summaryCalculator';
+import { calculateMonthlySummary, getOpeningBalanceInfo, getRollsForDate, getRollsForMonth } from './summaryCalculator';
 
 interface jsPDF {
     autoTable: (options: any) => jsPDF;
@@ -87,8 +87,9 @@ const generateMDCF = (data: AppData, selectedMonth: string, overrideData?: MdcfO
         theme: 'grid',
         styles: { fontSize: 8, cellPadding: 1.5 },
     });
-
-    const onRoll = data.settings.classRolls.reduce((sum, c) => sum + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0);
+    
+    const rollsForMonth = getRollsForMonth(data, selectedMonth);
+    const onRoll = rollsForMonth.reduce((sum, c) => sum + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0);
 
     // Checkbox section
     doc.setFontSize(8);
@@ -201,15 +202,19 @@ const generateMDCF = (data: AppData, selectedMonth: string, overrideData?: MdcfO
     return doc.output('blob');
 };
 
-const generateRollStatementPDF = (data: AppData): Blob => {
+const generateRollStatementPDF = (data: AppData, selectedMonth: string): Blob => {
     const doc = new jspdf.jsPDF();
     const { settings } = data;
     const { schoolDetails } = settings;
 
+    const monthDate = new Date(`${selectedMonth}-02`);
+    const monthName = monthDate.toLocaleString('default', { month: 'long' });
+    const year = monthDate.getFullYear();
+
     doc.setFontSize(14).setFont(undefined, 'bold');
     doc.text(schoolDetails.name, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
     doc.setFontSize(11).setFont(undefined, 'normal');
-    doc.text('Student Enrollment (Roll Statement)', doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+    doc.text(`Student Enrollment (Roll Statement) for ${monthName} ${year}`, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
 
     const head = [['Class', 'Gen (Boys)', 'Gen (Girls)', 'ST/SC (Boys)', 'ST/SC (Girls)', 'Total Boys', 'Total Girls', 'On Roll']];
     const body: any[][] = [];
@@ -236,9 +241,11 @@ const generateRollStatementPDF = (data: AppData): Blob => {
         { title: 'Primary (I-V)', ids: ['c5', 'c4', 'c3', 'c2', 'c1'] },
         { title: 'Pre-Primary', ids: ['bal', 'pp1', 'pp2'] },
     ];
+    
+    const currentClassRolls = getRollsForMonth(data, selectedMonth);
 
     sections.forEach(section => {
-        const sectionClasses = (settings.classRolls || []).filter(cr => section.ids.includes(cr.id));
+        const sectionClasses = currentClassRolls.filter(cr => section.ids.includes(cr.id));
         if (sectionClasses.length > 0) {
             // NOTE: Casting the cell content object to `any` is a necessary workaround.
             // The `jspdf-autotable` type definitions do not properly include properties like `colSpan`.
@@ -301,17 +308,16 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
     const year = monthDate.getFullYear();
     const categories: Category[] = ['balvatika', 'primary', 'middle'];
 
-    const onRollTotals: Record<Category, number> = { balvatika: 0, primary: 0, middle: 0 };
-    settings.classRolls.forEach(c => {
-        const classTotal = c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls;
-        if (['bal', 'pp1', 'pp2'].includes(c.id)) onRollTotals.balvatika += classTotal;
-        else if (['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)) onRollTotals.primary += classTotal;
-        else if (['c6', 'c7', 'c8'].includes(c.id)) onRollTotals.middle += classTotal;
-    });
-
     categories.forEach((category, index) => {
-        const categoryOnRoll = onRollTotals[category];
-        if (categoryOnRoll === 0) return; // Skip category if no students are enrolled
+        const rollsForMonth = getRollsForMonth(data, selectedMonth);
+        let categoryOnRollForMonth = 0;
+        rollsForMonth.forEach(c => {
+             const classTotal = c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls;
+            if (category === 'balvatika' && ['bal', 'pp1', 'pp2'].includes(c.id)) categoryOnRollForMonth += classTotal;
+            else if (category === 'primary' && ['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)) categoryOnRollForMonth += classTotal;
+            else if (category === 'middle' && ['c6', 'c7', 'c8'].includes(c.id)) categoryOnRollForMonth += classTotal;
+        });
+        if (categoryOnRollForMonth === 0) return;
 
         if (index > 0) {
             doc.addPage();
@@ -331,6 +337,15 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
         monthEntries.forEach((entry, entryIndex) => {
             const present = entry.present[category];
             const mealServed = present > 0;
+
+            const rollsForDay = getRollsForDate(data, entry.date);
+            let onRollForDay = 0;
+            rollsForDay.forEach(c => {
+                const classTotal = c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls;
+                if (category === 'balvatika' && ['bal', 'pp1', 'pp2'].includes(c.id)) onRollForDay += classTotal;
+                else if (category === 'primary' && ['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)) onRollForDay += classTotal;
+                else if (category === 'middle' && ['c6', 'c7', 'c8'].includes(c.id)) onRollForDay += classTotal;
+            });
             
             if (mealServed) {
                 const riceUsed = (present * rates.rice[category]) / 1000;
@@ -351,7 +366,7 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
                 body.push([
                     entryIndex + 1,
                     new Date(entry.date + 'T00:00:00').toLocaleDateString('en-IN'),
-                    categoryOnRoll,
+                    onRollForDay,
                     present,
                     riceUsed.toFixed(3),
                     dalVeg.toFixed(2),
@@ -362,8 +377,6 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
                     '-'
                 ]);
             } else {
-                 // NOTE: Casting the cell content object to `any` is a necessary workaround.
-                 // The `jspdf-autotable` type definitions do not properly include properties like `colSpan`.
                  body.push([
                     { content: `${new Date(entry.date + 'T00:00:00').toLocaleDateString('en-IN')} - ${entry.reasonForNoMeal || 'No Meal Served'}`, colSpan: 11, styles: { halign: 'center', fontStyle: 'italic', textColor: [0, 0, 0] } } as any
                 ]);
@@ -464,10 +477,11 @@ const generateRiceRequirementPDF = (data: AppData, selectedMonth: string): Blob 
     doc.text('CERTIFICATE', doc.internal.pageSize.getWidth() / 2, 30, { align: 'center', 'charSpace': 1 });
     doc.line(88, 31, 122, 31); // Underline
 
-    const enrollment = settings.classRolls.reduce((sum, c) => sum + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0);
+    const rollsForMonth = getRollsForMonth(data, selectedMonth);
+    const enrollment = rollsForMonth.reduce((sum, c) => sum + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0);
 
     const riceByCategory = { balvatika: 0, primary: 0, middle: 0 };
-    settings.classRolls.forEach(c => {
+    rollsForMonth.forEach(c => {
         let cat: Category | null = null;
         if (['bal', 'pp1', 'pp2'].includes(c.id)) cat = 'balvatika';
         else if (['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)) cat = 'primary';
@@ -487,9 +501,9 @@ const generateRiceRequirementPDF = (data: AppData, selectedMonth: string): Blob 
         startY: 80,
         head: [['Category', 'Enrollment', 'Working Days', 'Rate (g/day)', 'Total Rice (kg)']],
         body: [
-            ['Balvatika', settings.classRolls.filter(c => ['bal', 'pp1', 'pp2'].includes(c.id)).reduce((s, c) => s + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0), workingDays, settings.rates.rice.balvatika, riceByCategory.balvatika.toFixed(3)],
-            ['Primary (I-V)', settings.classRolls.filter(c => ['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)).reduce((s, c) => s + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0), workingDays, settings.rates.rice.primary, riceByCategory.primary.toFixed(3)],
-            ['Middle (VI-VIII)', settings.classRolls.filter(c => ['c6', 'c7', 'c8'].includes(c.id)).reduce((s, c) => s + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0), workingDays, settings.rates.rice.middle, riceByCategory.middle.toFixed(3)],
+            ['Balvatika', rollsForMonth.filter(c => ['bal', 'pp1', 'pp2'].includes(c.id)).reduce((s, c) => s + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0), workingDays, settings.rates.rice.balvatika, riceByCategory.balvatika.toFixed(3)],
+            ['Primary (I-V)', rollsForMonth.filter(c => ['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)).reduce((s, c) => s + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0), workingDays, settings.rates.rice.primary, riceByCategory.primary.toFixed(3)],
+            ['Middle (VI-VIII)', rollsForMonth.filter(c => ['c6', 'c7', 'c8'].includes(c.id)).reduce((s, c) => s + c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls, 0), workingDays, settings.rates.rice.middle, riceByCategory.middle.toFixed(3)],
         ],
         foot: [['Total', enrollment, '', '', totalRiceKg.toFixed(3)]],
         theme: 'grid',
@@ -505,15 +519,6 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
     const { schoolDetails } = settings;
     const categories: Category[] = ['balvatika', 'primary', 'middle'];
 
-    const onRollTotals: Record<Category, number> = { balvatika: 0, primary: 0, middle: 0 };
-    settings.classRolls.forEach(c => {
-        const classTotal = c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls;
-        if (['bal', 'pp1', 'pp2'].includes(c.id)) onRollTotals.balvatika += classTotal;
-        else if (['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)) onRollTotals.primary += classTotal;
-        else if (['c6', 'c7', 'c8'].includes(c.id)) onRollTotals.middle += classTotal;
-    });
-    const totalOnRoll = onRollTotals.balvatika + onRollTotals.primary + onRollTotals.middle;
-
     const [startYear, endYear] = financialYear.split('-').map(Number);
 
     doc.setFontSize(14).setFont(undefined, 'bold');
@@ -523,8 +528,6 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
 
     const head = [
         [
-            // NOTE: Casting cell content objects to `any` is a necessary workaround.
-            // The `jspdf-autotable` type definitions do not properly include properties like `rowSpan` or `colSpan`.
             { content: 'Month', rowSpan: 2, styles: { valign: 'middle' } } as any,
             { content: 'Category', rowSpan: 2, styles: { valign: 'middle' } } as any,
             { content: 'On Roll', rowSpan: 2, styles: { valign: 'middle' } } as any,
@@ -540,6 +543,7 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
 
     const body: any[][] = [];
     const grandTotals = {
+        onRoll: 0,
         mealsServed: 0,
         riceReceived: 0,
         riceConsumed: 0,
@@ -560,6 +564,7 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
         const monthName = monthDate.toLocaleString('default', { month: 'long' });
 
         const summary = calculateMonthlySummary(data, monthKey);
+        const rollsForMonth = getRollsForMonth(data, monthKey);
         
         const monthTotals = {
             onRoll: 0, mealsServed: 0,
@@ -568,7 +573,14 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
         };
 
         categories.forEach((cat, catIndex) => {
-            const onRoll = onRollTotals[cat];
+            let onRoll = 0;
+            rollsForMonth.forEach(c => {
+                const classTotal = c.general.boys + c.general.girls + c.stsc.boys + c.stsc.girls;
+                if (cat === 'balvatika' && ['bal', 'pp1', 'pp2'].includes(c.id)) onRoll += classTotal;
+                else if (cat === 'primary' && ['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id)) onRoll += classTotal;
+                else if (cat === 'middle' && ['c6', 'c7', 'c8'].includes(c.id)) onRoll += classTotal;
+            });
+
             const mealsServed = summary.categoryTotals.present[cat];
             const rice = summary.riceAbstracts[cat];
             const cash = summary.cashAbstracts[cat];
@@ -588,13 +600,11 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
             ];
 
             if (catIndex === 0) {
-                // NOTE: See comment above regarding `any` casting for `rowSpan`.
-                rowData.unshift({ content: monthName, rowSpan: 3 } as any);
+                rowData.unshift({ content: monthName, rowSpan: 3, styles: { valign: 'middle' } } as any);
             }
 
             body.push(rowData);
             
-            // Accumulate month totals
             monthTotals.onRoll += onRoll;
             monthTotals.mealsServed += mealsServed;
             monthTotals.riceOpening += rice.opening;
@@ -607,19 +617,17 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
             monthTotals.cashClosing += cash.balance;
         });
         
-        // Capture opening balance for the year from the first month (April)
         if (i === 0) {
             yearlyOpeningRice = monthTotals.riceOpening;
             yearlyOpeningCash = monthTotals.cashOpening;
         }
 
-        // Capture closing balance for the year from the last month (March)
         if (i === 11) {
             yearlyClosingRice = monthTotals.riceClosing;
             yearlyClosingCash = monthTotals.cashClosing;
         }
 
-        // Accumulate grand totals
+        grandTotals.onRoll = monthTotals.onRoll; // Use last month's onRoll for the total
         grandTotals.mealsServed += monthTotals.mealsServed;
         grandTotals.riceReceived += monthTotals.riceReceived;
         grandTotals.riceConsumed += monthTotals.riceConsumed;
@@ -629,7 +637,7 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
 
     const foot = [[
         { content: 'Grand Total', colSpan: 2, styles: { halign: 'center' } },
-        totalOnRoll,
+        grandTotals.onRoll,
         grandTotals.mealsServed,
         yearlyOpeningRice.toFixed(3),
         grandTotals.riceReceived.toFixed(3),
@@ -651,7 +659,7 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
         headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], halign: 'center', fontSize: 8 },
         footStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0] },
         columnStyles: { 
-            0: { halign: 'left', fontStyle: 'bold' },
+            0: { halign: 'left', fontStyle: 'bold', valign: 'middle' },
             1: { halign: 'left' } 
         },
         showFoot: 'lastPage',
@@ -674,8 +682,8 @@ export const generatePDFReport = (reportType: string, data: AppData, parameter: 
             filename = `${schoolName}_MDCF_${parameter}.pdf`;
             break;
         case 'roll_statement':
-            pdfBlob = generateRollStatementPDF(data);
-            filename = `${schoolName}_Roll_Statement.pdf`;
+            pdfBlob = generateRollStatementPDF(data, parameter);
+            filename = `${schoolName}_Roll_Statement_${parameter}.pdf`;
             break;
         case 'daily_consumption':
             pdfBlob = generateDailyConsumptionPDF(data, parameter);
