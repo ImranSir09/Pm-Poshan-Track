@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -5,7 +6,6 @@ import { useData } from '../../hooks/useData';
 import { useToast } from '../../hooks/useToast';
 import Modal from '../ui/Modal';
 import { Category, CookCumHelper, InspectionAuthority, InspectionReport, Settings } from '../../types';
-import PDFPreviewModal from '../ui/PDFPreviewModal';
 import { generatePDFReport } from '../../services/pdfGenerator';
 import { calculateMonthlySummary, getRollsForMonth } from '../../services/summaryCalculator';
 import { Accordion, AccordionItem } from '../ui/Accordion';
@@ -20,15 +20,6 @@ const reportDescriptions: Record<string, string> = {
     yearly_consumption_detailed: "A comprehensive yearly report with category-wise monthly breakdowns of consumption, stock, and funds."
 };
 
-// Helper function to convert Blob to a Data URL for embedding
-const convertBlobToDataURL = (blob: Blob): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = (error) => reject(error);
-        reader.readAsDataURL(blob);
-    });
-};
 
 type MdcfDataType = Partial<Pick<Settings, 'healthStatus' | 'inspectionReport' | 'cooks' | 'mmeExpenditure'>>;
 
@@ -58,8 +49,6 @@ const Reports: React.FC = () => {
     const [selectedFinancialYear, setSelectedFinancialYear] = useState(financialYearOptions[0]);
     
     const [isGenerating, setIsGenerating] = useState(false);
-    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-    const [pdfPreviewData, setPdfPreviewData] = useState<{ blobUrl: string; pdfBlob: Blob; filename: string; generationData?: MdcfDataType } | null>(null);
     
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [reportSummary, setReportSummary] = useState<Record<string, string | number> | null>(null);
@@ -80,7 +69,7 @@ const Reports: React.FC = () => {
         }
 
         const summary = calculateMonthlySummary(data, selectedMonth);
-        const { totals, closingBalance, monthEntries } = summary;
+        const { totals, monthEntries } = summary;
         
         let newSummary: Record<string, string | number> = {};
         const monthDate = new Date(`${selectedMonth}-02T00:00:00`);
@@ -122,45 +111,34 @@ const Reports: React.FC = () => {
 
     const handleReportExport = (overrideData?: MdcfDataType) => {
         setIsGenerating(true);
-        setTimeout(async () => {
+        // Use a short timeout to allow the UI to update to the "Generating..." state
+        setTimeout(() => {
             try {
                 const parameter = ['yearly_consumption_detailed'].includes(reportType) ? selectedFinancialYear : selectedMonth;
                 const { pdfBlob, filename } = generatePDFReport(reportType, data, parameter, overrideData);
 
-                const dataUrl = await convertBlobToDataURL(pdfBlob);
-                
-                setPdfPreviewData({ 
-                    blobUrl: dataUrl, 
-                    pdfBlob: pdfBlob, 
-                    filename: filename,
-                    generationData: overrideData,
-                });
+                // Create a URL for the blob and trigger download
+                const downloadUrl = URL.createObjectURL(pdfBlob);
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
 
-                if (!isPreviewOpen) setIsPreviewOpen(true);
+                // Clean up the URL object after a short delay
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(downloadUrl);
+                }, 100);
+
                 showToast('Report generated successfully!', 'success');
             } catch (error: any) {
-                console.error("PDF generation or conversion failed:", error);
+                console.error("PDF generation failed:", error);
                 showToast(error.message || 'Failed to generate PDF report.', 'error');
             } finally {
                 setIsGenerating(false);
             }
         }, 50);
-    };
-
-    const handleClosePreview = () => {
-        setIsPreviewOpen(false);
-        setPdfPreviewData(null);
-    };
-    
-    const handleRegenerate = () => {
-        handleClosePreview();
-        setTimeout(() => {
-            if (reportType === 'mdcf') {
-                setIsMdcfModalOpen(true); // Re-open the details modal
-            } else {
-                initiateReportGeneration();
-            }
-        }, 100);
     };
 
     const handleMdcfChange = (section: keyof MdcfDataType, field: string, value: any) => {
@@ -187,14 +165,7 @@ const Reports: React.FC = () => {
                     </div>
                 </div>
             )}
-            <PDFPreviewModal
-                isOpen={isPreviewOpen}
-                onClose={handleClosePreview}
-                pdfUrl={pdfPreviewData?.blobUrl || ''}
-                pdfBlob={pdfPreviewData?.pdfBlob || null}
-                filename={pdfPreviewData?.filename || 'report.pdf'}
-                onRegenerate={handleRegenerate}
-            />
+            
              <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)} title="Confirm Report Generation">
                 <div className="space-y-4">
                     <p className="text-sm text-stone-600 dark:text-gray-300">Please review the summary below before generating the PDF.</p>
@@ -324,7 +295,7 @@ const Reports: React.FC = () => {
                             </div>
                         )}
                         <Button onClick={initiateReportGeneration} className="w-full" disabled={isGenerating}>
-                            Generate & Preview PDF
+                            Generate PDF
                         </Button>
                     </div>
                 </Card>
