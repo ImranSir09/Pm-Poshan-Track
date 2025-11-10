@@ -107,8 +107,6 @@ export interface Settings {
     schoolDetails: SchoolDetails;
     classRolls: ClassRoll[];
     rates: Rates;
-    ratesHistory?: RateHistoryEntry[];
-    rollStatementHistory?: RollStatementHistoryEntry[];
     autoOverwrite: boolean;
     cooks: CookCumHelper[];
     healthStatus: HealthStatus;

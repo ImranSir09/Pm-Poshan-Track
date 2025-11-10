@@ -43,7 +43,7 @@ const getInitialData = (): AppData => {
     try {
         const savedData = localStorage.getItem(APP_DATA_KEY);
         if (savedData) {
-            const parsedData = JSON.parse(savedData) as Partial<AppData> & { rollStatementHistory?: any };
+            const parsedData = JSON.parse(savedData) as Partial<AppData>;
 
             // Create a new data object by merging loaded data over the default structure.
             let dataToProcess: AppData = {
@@ -52,12 +52,6 @@ const getInitialData = (): AppData => {
                 auth: { ...defaultData.auth, ...(parsedData.auth || {}) },
                 settings: deepMerge(DEFAULT_SETTINGS, parsedData.settings || {}),
             };
-
-            // MIGRATION: Move top-level `rollStatementHistory` into `settings` for data model consistency.
-            if (parsedData.rollStatementHistory && !dataToProcess.settings.rollStatementHistory) {
-                dataToProcess.settings.rollStatementHistory = parsedData.rollStatementHistory;
-                delete (dataToProcess as any).rollStatementHistory;
-            }
 
             // MIGRATION: Convert old inspection report object to new string format
             if (dataToProcess.settings?.inspectionReport?.inspectedBy && isObject(dataToProcess.settings.inspectionReport.inspectedBy)) {
@@ -96,40 +90,6 @@ const getInitialData = (): AppData => {
                 dataToProcess.monthlyBalances = migratedBalances;
             }
             
-            // MIGRATION: Create rate history if it doesn't exist from the single rates object.
-            if (dataToProcess.settings?.rates && (!dataToProcess.settings.ratesHistory || dataToProcess.settings.ratesHistory.length === 0)) {
-                dataToProcess.settings.ratesHistory = [
-                    {
-                        effectiveDate: '1970-01-01',
-                        rates: JSON.parse(JSON.stringify(dataToProcess.settings.rates)) // deep copy
-                    }
-                ];
-            }
-            
-            // MIGRATION: Create roll statement history if it doesn't exist
-            if ((!dataToProcess.settings.rollStatementHistory || dataToProcess.settings.rollStatementHistory.length === 0) && dataToProcess.settings?.classRolls) {
-                dataToProcess.settings.rollStatementHistory = [
-                    {
-                        effectiveDate: '1970-01-01', // A date in the distant past
-                        classRolls: JSON.parse(JSON.stringify(dataToProcess.settings.classRolls)) // deep copy
-                    }
-                ];
-            }
-
-            // SYNC: Ensure `settings.rates` is always synchronized with the latest from history
-            if (dataToProcess.settings.ratesHistory && dataToProcess.settings.ratesHistory.length > 0) {
-                const sortedRatesHistory = [...dataToProcess.settings.ratesHistory].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
-                dataToProcess.settings.rates = sortedRatesHistory[0].rates;
-            }
-            
-            // SYNC: Ensure `settings.classRolls` is always synchronized with the latest from history.
-            if (dataToProcess.settings.rollStatementHistory && dataToProcess.settings.rollStatementHistory.length > 0) {
-                const sortedRollsHistory = [...dataToProcess.settings.rollStatementHistory].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
-                if (sortedRollsHistory[0].classRolls) {
-                    dataToProcess.settings.classRolls = sortedRollsHistory[0].classRolls;
-                }
-            }
-
             // Migration for welcome screen: if user exists but flag is missing, assume they don't need to see it.
             if (dataToProcess.auth?.password && typeof dataToProcess.welcomeScreenShown === 'undefined') {
                 dataToProcess.welcomeScreenShown = true;
@@ -228,49 +188,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }));
     }, []);
 
-    const updateSettings = useCallback((newSettingsFromUI: Settings) => {
-        setData(prevData => {
-            // Create a mutable copy of the new settings to work with
-            const updatedSettings = JSON.parse(JSON.stringify(newSettingsFromUI));
-            const todayStr = new Date().toISOString().slice(0, 10);
-
-            // --- Manage Rate History ---
-            const currentRatesHistory = [...(prevData.settings.ratesHistory || [])];
-            const latestRatesEntry = [...currentRatesHistory].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime())[0];
-            const hasRatesChanged = !latestRatesEntry || JSON.stringify(latestRatesEntry.rates) !== JSON.stringify(updatedSettings.rates);
-
-            if (hasRatesChanged) {
-                const todayEntryIndex = currentRatesHistory.findIndex(e => e.effectiveDate === todayStr);
-                if (todayEntryIndex !== -1) {
-                    // If an entry for today already exists, update it
-                    currentRatesHistory[todayEntryIndex].rates = updatedSettings.rates;
-                } else {
-                    // Otherwise, add a new entry
-                    currentRatesHistory.push({ effectiveDate: todayStr, rates: updatedSettings.rates });
-                }
-            }
-            updatedSettings.ratesHistory = currentRatesHistory;
-
-            // --- Manage Roll Statement History ---
-            const currentRollHistory = [...(prevData.settings.rollStatementHistory || [])];
-            const latestRollEntry = [...currentRollHistory].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime())[0];
-            const hasRollsChanged = !latestRollEntry || JSON.stringify(latestRollEntry.classRolls) !== JSON.stringify(updatedSettings.classRolls);
-
-            if (hasRollsChanged) {
-                const todayEntryIndex = currentRollHistory.findIndex(e => e.effectiveDate === todayStr);
-                if (todayEntryIndex !== -1) {
-                    // If an entry for today already exists, update it
-                    currentRollHistory[todayEntryIndex].classRolls = updatedSettings.classRolls;
-                } else {
-                    // Otherwise, add a new entry
-                    currentRollHistory.push({ effectiveDate: todayStr, classRolls: updatedSettings.classRolls });
-                }
-            }
-            updatedSettings.rollStatementHistory = currentRollHistory;
-
-            // Return the new state with the fully updated settings object
-            return { ...prevData, settings: updatedSettings };
-        });
+    const updateSettings = useCallback((newSettings: Settings) => {
+        setData(prevData => ({
+            ...prevData,
+            settings: newSettings,
+        }));
     }, []);
     
     const updateAuth = useCallback((authData: AuthData) => {

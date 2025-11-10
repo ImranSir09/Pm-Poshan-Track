@@ -17,7 +17,6 @@ const reportDescriptions: Record<string, string> = {
     roll_statement: "Creates a summary of student enrollment numbers by class and social category for the selected month.",
     daily_consumption: "Produces a detailed, register-style log of daily meals, attendance, and expenditure for the selected month.",
     rice_requirement: "Generates a formal certificate for the monthly rice requirement based on enrollment and working days.",
-    yearly_consumption_detailed: "A comprehensive yearly report with category-wise monthly breakdowns of consumption, stock, and funds."
 };
 
 
@@ -34,19 +33,6 @@ const Reports: React.FC = () => {
         const month = String(d.getMonth() + 1).padStart(2, '0');
         return `${year}-${month}`;
     });
-    
-    const financialYearOptions = useMemo(() => {
-        const currentMonth = new Date().getMonth(); // 0-11
-        const currentYear = new Date().getFullYear();
-        const endYear = currentMonth < 3 ? currentYear : currentYear + 1;
-        const options = [];
-        for (let i = 0; i < 5; i++) {
-            const year = endYear - i;
-            options.push(`${year - 1}-${year}`);
-        }
-        return options;
-    }, []);
-    const [selectedFinancialYear, setSelectedFinancialYear] = useState(financialYearOptions[0]);
     
     const [isGenerating, setIsGenerating] = useState(false);
     
@@ -100,9 +86,6 @@ const Reports: React.FC = () => {
                  }, 0);
                 newSummary = { 'Report': 'Rice Requirement Certificate', 'For Month': monthName, 'Total Enrollment': enrollment, 'Working Days': workingDays, 'Total Rice Required': `${totalRiceKg.toFixed(3)} kg` };
                 break;
-            case 'yearly_consumption_detailed':
-                newSummary = { 'Report': 'Detailed Yearly Consumption Report', 'For Financial Year': selectedFinancialYear, 'Note': 'This report shows category-wise details for each month and may take time to generate.' };
-                break;
         }
 
         setReportSummary(newSummary);
@@ -114,8 +97,7 @@ const Reports: React.FC = () => {
         // Use a short timeout to allow the UI to update to the "Generating..." state
         setTimeout(() => {
             try {
-                const parameter = ['yearly_consumption_detailed'].includes(reportType) ? selectedFinancialYear : selectedMonth;
-                const { pdfBlob, filename } = generatePDFReport(reportType, data, parameter, overrideData);
+                const { pdfBlob, filename } = generatePDFReport(reportType, data, selectedMonth, overrideData);
 
                 // Create a URL for the blob and trigger download
                 const downloadUrl = URL.createObjectURL(pdfBlob);
@@ -147,9 +129,6 @@ const Reports: React.FC = () => {
     const handleMdcfCookChange = (id: string, field: keyof CookCumHelper, value: string | number) => {
         setMdcfData(prev => prev ? ({ ...prev, cooks: prev.cooks?.map(cook => cook.id === id ? { ...cook, [field]: value } : cook) }) : null);
     };
-
-    const needsMonth = !['yearly_consumption_detailed'].includes(reportType);
-    const needsYear = ['yearly_consumption_detailed'].includes(reportType);
 
     return (
         <>
@@ -263,37 +242,19 @@ const Reports: React.FC = () => {
                                 <option value="roll_statement">Roll Statement</option>
                                 <option value="daily_consumption">Daily Consumption Register</option>
                                 <option value="rice_requirement">Rice Requirement Certificate</option>
-                                <option value="yearly_consumption_detailed">Yearly Consumption Report (Detailed)</option>
                             </select>
                             <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">{reportDescriptions[reportType]}</p>
                         </div>
-                        {needsMonth && (
-                            <div>
-                                <label htmlFor="month-select" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Select Month</label>
-                                <input
-                                    id="month-select"
-                                    type="month"
-                                    value={selectedMonth}
-                                    onChange={(e) => setSelectedMonth(e.target.value)}
-                                    className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg p-2.5 focus:ring-amber-500 focus:border-amber-500"
-                                />
-                            </div>
-                        )}
-                         {needsYear && (
-                             <div>
-                                <label htmlFor="year-select" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Select Financial Year</label>
-                                <select
-                                    id="year-select"
-                                    value={selectedFinancialYear}
-                                    onChange={(e) => setSelectedFinancialYear(e.target.value)}
-                                    className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg p-2.5 focus:ring-amber-500 focus:border-amber-500"
-                                >
-                                    {financialYearOptions.map(year => (
-                                        <option key={year} value={year}>{year}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
+                        <div>
+                            <label htmlFor="month-select" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Select Month</label>
+                            <input
+                                id="month-select"
+                                type="month"
+                                value={selectedMonth}
+                                onChange={(e) => setSelectedMonth(e.target.value)}
+                                className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg p-2.5 focus:ring-amber-500 focus:border-amber-500"
+                            />
+                        </div>
                         <Button onClick={initiateReportGeneration} className="w-full" disabled={isGenerating}>
                             Generate PDF
                         </Button>

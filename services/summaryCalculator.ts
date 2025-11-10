@@ -2,33 +2,11 @@
 import { AppData, MonthlyBalanceData, Category, AbstractData, ClassRoll, Rates } from '../types';
 
 export const getRollsForDate = (data: AppData, date: string): ClassRoll[] => {
-    const history = data.settings.rollStatementHistory || [];
-    
-    if (history.length === 0) {
-        return data.settings.classRolls; // Fallback to current settings
-    }
-
-    const sortedHistory = [...history].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
-
-    const applicableStatement = sortedHistory.find(entry => entry.effectiveDate <= date);
-
-    return applicableStatement ? applicableStatement.classRolls : sortedHistory[sortedHistory.length - 1].classRolls; // Fallback to the oldest entry if date is before all entries
+    return data.settings.classRolls;
 };
 
 export const getRatesForDate = (data: AppData, date: string): Rates => {
-    const history = data.settings.ratesHistory || [];
-    
-    // Fallback to current rates if history is somehow empty
-    if (history.length === 0) {
-        return data.settings.rates;
-    }
-
-    const sortedHistory = [...history].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
-
-    const applicableStatement = sortedHistory.find(entry => entry.effectiveDate <= date);
-
-    // Fallback to the oldest entry if date is before all entries, or current if nothing found
-    return applicableStatement ? applicableStatement.rates : (sortedHistory[sortedHistory.length - 1]?.rates || data.settings.rates);
+    return data.settings.rates;
 };
 
 
