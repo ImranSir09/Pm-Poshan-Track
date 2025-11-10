@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 
 // SVG icons for visibility toggle
@@ -29,7 +28,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({ label, id, containerClass
         setShowPassword(prev => !prev);
     };
 
-    const baseInputClasses = "w-full bg-slate-100/60 dark:bg-slate-700/50 border border-slate-300/50 dark:border-slate-600 text-slate-900 dark:text-white text-sm rounded-lg focus:ring-sky-500 focus:border-sky-500 block p-2.5 placeholder-slate-500 dark:placeholder-slate-400 pr-10";
+    const baseInputClasses = "w-full bg-slate-100 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-lg focus:ring-sky-500 focus:border-sky-500 block p-2.5 placeholder-slate-500 dark:placeholder-slate-400 pr-10";
 
     return (
         <div className={containerClassName}>

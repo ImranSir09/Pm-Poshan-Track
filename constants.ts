@@ -55,6 +55,16 @@ export const DEFAULT_SETTINGS: Settings = {
             }
         }
     ],
+    rollStatementHistory: [
+        {
+            effectiveDate: '1970-01-01',
+            classRolls: CLASS_STRUCTURE.map(c => ({
+                ...c,
+                general: { boys: 0, girls: 0 },
+                stsc: { boys: 0, girls: 0 },
+            })),
+        }
+    ],
     autoOverwrite: false,
     cooks: [],
     healthStatus: {

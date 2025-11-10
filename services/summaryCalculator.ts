@@ -2,7 +2,7 @@
 import { AppData, MonthlyBalanceData, Category, AbstractData, ClassRoll, Rates } from '../types';
 
 export const getRollsForDate = (data: AppData, date: string): ClassRoll[] => {
-    const history = data.rollStatementHistory || [];
+    const history = data.settings.rollStatementHistory || [];
     
     if (history.length === 0) {
         return data.settings.classRolls; // Fallback to current settings

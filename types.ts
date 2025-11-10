@@ -108,6 +108,7 @@ export interface Settings {
     classRolls: ClassRoll[];
     rates: Rates;
     ratesHistory?: RateHistoryEntry[];
+    rollStatementHistory?: RollStatementHistoryEntry[];
     autoOverwrite: boolean;
     cooks: CookCumHelper[];
     healthStatus: HealthStatus;
@@ -177,7 +178,6 @@ export interface AppData {
     entries: DailyEntry[];
     receipts: Receipt[];
     monthlyBalances: MonthlyBalance;
-    rollStatementHistory?: RollStatementHistoryEntry[];
     lastBackupDate?: string; // ISO string
     welcomeScreenShown?: boolean;
 }

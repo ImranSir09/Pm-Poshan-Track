@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { AppData, DailyEntry, Receipt, Settings, MonthlyBalanceData, MonthlyBalance, InspectionAuthority, AuthData } from '../types';
 import { DEFAULT_SETTINGS } from '../constants';
@@ -35,7 +36,6 @@ const getInitialData = (): AppData => {
         entries: [],
         receipts: [],
         monthlyBalances: {},
-        rollStatementHistory: [],
         lastBackupDate: undefined,
         welcomeScreenShown: false,
     };
@@ -43,16 +43,21 @@ const getInitialData = (): AppData => {
     try {
         const savedData = localStorage.getItem(APP_DATA_KEY);
         if (savedData) {
-            const parsedData = JSON.parse(savedData) as Partial<AppData>;
+            const parsedData = JSON.parse(savedData) as Partial<AppData> & { rollStatementHistory?: any };
 
             // Create a new data object by merging loaded data over the default structure.
-            // This ensures all top-level keys exist and prevents crashes from undefined properties.
             let dataToProcess: AppData = {
                 ...defaultData,
                 ...parsedData,
                 auth: { ...defaultData.auth, ...(parsedData.auth || {}) },
                 settings: deepMerge(DEFAULT_SETTINGS, parsedData.settings || {}),
             };
+
+            // MIGRATION: Move top-level `rollStatementHistory` into `settings` for data model consistency.
+            if (parsedData.rollStatementHistory && !dataToProcess.settings.rollStatementHistory) {
+                dataToProcess.settings.rollStatementHistory = parsedData.rollStatementHistory;
+                delete (dataToProcess as any).rollStatementHistory;
+            }
 
             // MIGRATION: Convert old inspection report object to new string format
             if (dataToProcess.settings?.inspectionReport?.inspectedBy && isObject(dataToProcess.settings.inspectionReport.inspectedBy)) {
@@ -90,18 +95,6 @@ const getInitialData = (): AppData => {
                 });
                 dataToProcess.monthlyBalances = migratedBalances;
             }
-             // MIGRATION: Create roll statement history if it doesn't exist
-            if ((!dataToProcess.rollStatementHistory || dataToProcess.rollStatementHistory.length === 0) && dataToProcess.settings?.classRolls) {
-                dataToProcess.rollStatementHistory = [
-                    {
-                        effectiveDate: '1970-01-01', // A date in the distant past
-                        classRolls: JSON.parse(JSON.stringify(dataToProcess.settings.classRolls)) // deep copy
-                    }
-                ];
-            }
-             if (!dataToProcess.rollStatementHistory) {
-                dataToProcess.rollStatementHistory = [];
-            }
             
             // MIGRATION: Create rate history if it doesn't exist from the single rates object.
             if (dataToProcess.settings?.rates && (!dataToProcess.settings.ratesHistory || dataToProcess.settings.ratesHistory.length === 0)) {
@@ -112,26 +105,32 @@ const getInitialData = (): AppData => {
                     }
                 ];
             }
-            if (!dataToProcess.settings.ratesHistory) {
-                dataToProcess.settings.ratesHistory = [];
-            }
             
+            // MIGRATION: Create roll statement history if it doesn't exist
+            if ((!dataToProcess.settings.rollStatementHistory || dataToProcess.settings.rollStatementHistory.length === 0) && dataToProcess.settings?.classRolls) {
+                dataToProcess.settings.rollStatementHistory = [
+                    {
+                        effectiveDate: '1970-01-01', // A date in the distant past
+                        classRolls: JSON.parse(JSON.stringify(dataToProcess.settings.classRolls)) // deep copy
+                    }
+                ];
+            }
+
             // SYNC: Ensure `settings.rates` is always synchronized with the latest from history
-            if (dataToProcess.settings.ratesHistory.length > 0) {
+            if (dataToProcess.settings.ratesHistory && dataToProcess.settings.ratesHistory.length > 0) {
                 const sortedRatesHistory = [...dataToProcess.settings.ratesHistory].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
                 dataToProcess.settings.rates = sortedRatesHistory[0].rates;
             }
             
             // SYNC: Ensure `settings.classRolls` is always synchronized with the latest from history.
-            if (dataToProcess.rollStatementHistory && dataToProcess.rollStatementHistory.length > 0) {
-                const sortedRollsHistory = [...dataToProcess.rollStatementHistory].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
+            if (dataToProcess.settings.rollStatementHistory && dataToProcess.settings.rollStatementHistory.length > 0) {
+                const sortedRollsHistory = [...dataToProcess.settings.rollStatementHistory].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
                 if (sortedRollsHistory[0].classRolls) {
                     dataToProcess.settings.classRolls = sortedRollsHistory[0].classRolls;
                 }
             }
 
-
-            // Migration for welcome screen: if user exists but flag is missing, assume they don've need to see it.
+            // Migration for welcome screen: if user exists but flag is missing, assume they don't need to see it.
             if (dataToProcess.auth?.password && typeof dataToProcess.welcomeScreenShown === 'undefined') {
                 dataToProcess.welcomeScreenShown = true;
             }
@@ -175,7 +174,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const handler = setTimeout(() => {
             try {
                 // Persist the entire app state to localStorage.
-                // This ensures that authentication state is preserved across reloads and after imports.
                 localStorage.setItem(APP_DATA_KEY, JSON.stringify(data));
             } catch (error) {
                 console.error("Failed to save data to localStorage", error);
@@ -230,73 +228,52 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }));
     }, []);
 
-    const updateSettings = useCallback((newSettings: Settings) => {
+    const updateSettings = useCallback((newSettingsFromUI: Settings) => {
         setData(prevData => {
-            // === RATE HISTORY LOGIC ===
-            const currentRatesHistory = prevData.settings.ratesHistory || [];
-            const sortedRatesHistory = [...currentRatesHistory].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
-            const latestRatesEntry = sortedRatesHistory.length > 0 ? sortedRatesHistory[0] : null;
-            const hasRatesChanged = !latestRatesEntry || JSON.stringify(latestRatesEntry.rates) !== JSON.stringify(newSettings.rates);
+            // Create a mutable copy of the new settings to work with
+            const updatedSettings = JSON.parse(JSON.stringify(newSettingsFromUI));
+            const todayStr = new Date().toISOString().slice(0, 10);
 
-            let updatedRatesHistory = currentRatesHistory;
+            // --- Manage Rate History ---
+            const currentRatesHistory = [...(prevData.settings.ratesHistory || [])];
+            const latestRatesEntry = [...currentRatesHistory].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime())[0];
+            const hasRatesChanged = !latestRatesEntry || JSON.stringify(latestRatesEntry.rates) !== JSON.stringify(updatedSettings.rates);
+
             if (hasRatesChanged) {
-                const today = new Date();
-                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                const todayEntryIndex = updatedRatesHistory.findIndex(entry => entry.effectiveDate === todayStr);
-
+                const todayEntryIndex = currentRatesHistory.findIndex(e => e.effectiveDate === todayStr);
                 if (todayEntryIndex !== -1) {
-                    updatedRatesHistory = updatedRatesHistory.map((entry, index) =>
-                        index === todayEntryIndex ? { ...entry, rates: newSettings.rates } : entry
-                    );
+                    // If an entry for today already exists, update it
+                    currentRatesHistory[todayEntryIndex].rates = updatedSettings.rates;
                 } else {
-                    updatedRatesHistory = [...updatedRatesHistory, { effectiveDate: todayStr, rates: newSettings.rates }];
+                    // Otherwise, add a new entry
+                    currentRatesHistory.push({ effectiveDate: todayStr, rates: updatedSettings.rates });
                 }
             }
-            // === END RATE HISTORY LOGIC ===
+            updatedSettings.ratesHistory = currentRatesHistory;
 
-            // === ROLL HISTORY LOGIC ===
-            const currentRollHistory = prevData.rollStatementHistory || [];
-            const sortedRollHistory = [...currentRollHistory].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
-            const latestRollHistoryEntry = sortedRollHistory.length > 0 ? sortedRollHistory[0] : null;
-            const hasRollsChanged = !latestRollHistoryEntry || JSON.stringify(latestRollHistoryEntry.classRolls) !== JSON.stringify(newSettings.classRolls);
+            // --- Manage Roll Statement History ---
+            const currentRollHistory = [...(prevData.settings.rollStatementHistory || [])];
+            const latestRollEntry = [...currentRollHistory].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime())[0];
+            const hasRollsChanged = !latestRollEntry || JSON.stringify(latestRollEntry.classRolls) !== JSON.stringify(updatedSettings.classRolls);
 
-            let updatedRollHistory = currentRollHistory;
             if (hasRollsChanged) {
-                const today = new Date();
-                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                
-                const todayEntryIndex = currentRollHistory.findIndex(entry => entry.effectiveDate === todayStr);
-
+                const todayEntryIndex = currentRollHistory.findIndex(e => e.effectiveDate === todayStr);
                 if (todayEntryIndex !== -1) {
-                    updatedRollHistory = currentRollHistory.map((entry, index) => {
-                        if (index === todayEntryIndex) {
-                            return { ...entry, classRolls: newSettings.classRolls };
-                        }
-                        return entry;
-                    });
+                    // If an entry for today already exists, update it
+                    currentRollHistory[todayEntryIndex].classRolls = updatedSettings.classRolls;
                 } else {
-                    updatedRollHistory = [
-                        ...currentRollHistory,
-                        {
-                            effectiveDate: todayStr,
-                            classRolls: newSettings.classRolls
-                        }
-                    ];
+                    // Otherwise, add a new entry
+                    currentRollHistory.push({ effectiveDate: todayStr, classRolls: updatedSettings.classRolls });
                 }
             }
-            // === END ROLL HISTORY LOGIC ===
+            updatedSettings.rollStatementHistory = currentRollHistory;
 
-            const finalSettings = {
-                ...newSettings,
-                ratesHistory: updatedRatesHistory,
-            };
-
-            return { ...prevData, settings: finalSettings, rollStatementHistory: updatedRollHistory };
+            // Return the new state with the fully updated settings object
+            return { ...prevData, settings: updatedSettings };
         });
     }, []);
     
     const updateAuth = useCallback((authData: AuthData) => {
-        // Asynchronously update auth data; the useEffect will handle saving.
         setData(prevData => ({ ...prevData, auth: authData }));
     }, []);
 
@@ -309,7 +286,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     contact: authData.contact || '',
                 }
             };
-            // Remove contact from auth data before saving to avoid duplication
             const { contact, ...restAuthData } = authData;
             return { 
                 ...prevData, 
@@ -341,37 +317,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const importData = useCallback((importedData: AppData) => {
         try {
             let finalData = importedData;
-            // Preserve authentication if the imported file doesn't have it
             if (!importedData.auth?.password) {
                 finalData = { ...importedData, auth: data.auth };
             }
-            // Persist synchronously to guarantee it's saved before reload.
             localStorage.setItem(APP_DATA_KEY, JSON.stringify(finalData));
-            
-            // Also update the state for consistency before the reload.
-            // This prevents a brief flash of old content if the component re-renders.
             setData(finalData);
-
             showToast('Data imported successfully! The app will now reload.', 'success');
-            // Reload the application to apply the new state cleanly from storage.
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
+            setTimeout(() => window.location.reload(), 1500);
         } catch (error) {
             console.error("Failed to import data:", error);
             showToast("Failed to import data. The file may be corrupt or storage is full.", "error");
         }
-    }, [data.auth, setData]);
+    }, [data.auth]);
 
     const resetData = useCallback(() => {
-        // Clear storage synchronously.
         localStorage.removeItem(APP_DATA_KEY);
         sessionStorage.removeItem('pm-poshan-auth');
-        
-        // The parent component shows a toast. We delay reload to ensure it's visible.
-        setTimeout(() => {
-            window.location.reload();
-        }, 1500);
+        setTimeout(() => window.location.reload(), 1500);
     }, []);
 
     return (

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
@@ -12,21 +11,12 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const applyTheme = (theme: Theme) => {
     const root = document.documentElement;
-    const body = document.body;
     
     const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-    // Toggle .dark on <html> for Tailwind's dark: variants to work everywhere
+    // Toggle .dark on <html> for Tailwind's dark: variants to work everywhere.
+    // Tailwind will automatically apply the dark mode styles defined in the HTML and components.
     root.classList.toggle('dark', isDark);
-
-    // Explicitly set body background class for robustness
-    body.classList.remove('bg-slate-50', 'bg-slate-900');
-    body.classList.add(isDark ? 'bg-slate-900' : 'bg-slate-50');
-
-    // Ensure transition classes are present
-    if (!body.classList.contains('transition-colors')) {
-        body.classList.add('transition-colors', 'duration-500');
-    }
 };
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {

@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
@@ -110,10 +109,13 @@ const SetupPage: React.FC = () => {
                     <div className="animated-blob blob-2 bg-teal-300 dark:bg-teal-900"></div>
                 </div>
                 <div className="w-full max-w-md z-10">
-                    <Card title="First-Time Setup">
-                        <p className="text-xs text-slate-600 dark:text-slate-300 mb-4">
+                    <div className="text-center mb-6">
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">First-Time Setup</h1>
+                        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                             Welcome! Please enter your signup key and create an account to secure this application.
                         </p>
+                    </div>
+                    <Card>
                         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
                             <div>
                                 <Input
@@ -191,7 +193,7 @@ const SetupPage: React.FC = () => {
                                 {errors.confirmPassword && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.confirmPassword}</p>}
                             </div>
                             
-                            <fieldset className="border border-slate-300/50 dark:border-slate-600 rounded-lg p-3">
+                            <fieldset className="border border-slate-300/50 dark:border-slate-700 rounded-lg p-3">
                                 <legend className="text-sm font-medium text-sky-700 dark:text-sky-400 px-1">Password Recovery</legend>
                                 <div className="space-y-3">
                                     <div>
@@ -200,7 +202,7 @@ const SetupPage: React.FC = () => {
                                             id="security-question"
                                             value={securityQuestion}
                                             onChange={e => setSecurityQuestion(e.target.value)}
-                                            className="w-full bg-slate-100/60 dark:bg-slate-700/50 border border-slate-300/50 dark:border-slate-600 text-slate-900 dark:text-white text-sm rounded-lg focus:ring-sky-500 focus:border-sky-500 block p-2.5"
+                                            className="w-full bg-slate-100 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-lg focus:ring-sky-500 focus:border-sky-500 block p-2.5"
                                         >
                                             {SECURITY_QUESTIONS.map(q => <option key={q} value={q}>{q}</option>)}
                                         </select>
