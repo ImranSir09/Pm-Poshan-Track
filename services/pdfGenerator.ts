@@ -1,15 +1,7 @@
-
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 import { AppData, Category, ClassRoll, Settings } from '../types';
 import { calculateMonthlySummary, getRatesForDate, getRollsForDate, getRollsForMonth } from './summaryCalculator';
-
-interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-    lastAutoTable: { finalY: number };
-    [key: string]: any;
-}
-
-// These are loaded from index.html
-declare const jspdf: any;
 
 // A reusable function to add signature blocks to the bottom of a page
 const addSignatureBlock = (doc: jsPDF, settings: AppData['settings'], startY: number) => {
@@ -58,7 +50,7 @@ const drawCheckbox = (doc: jsPDF, x: number, y: number, text: string, checked: b
 type MdcfOverrideData = Partial<Pick<Settings, 'healthStatus' | 'inspectionReport' | 'cooks' | 'mmeExpenditure'>>;
 
 const generateMDCF = (data: AppData, selectedMonth: string, overrideData?: MdcfOverrideData): Blob => {
-    const doc = new jspdf.jsPDF();
+    const doc = new jsPDF();
     
     // FIX: Merge override data with main settings to ensure report uses month-specific data.
     const settings = { ...data.settings, ...(overrideData || {}) };
@@ -82,7 +74,7 @@ const generateMDCF = (data: AppData, selectedMonth: string, overrideData?: MdcfO
     // ======== 1. School Details ========
     doc.setFontSize(10).setFont(undefined, 'bold');
     doc.text('1. School Details', 14, 32);
-    doc.autoTable({
+    (doc as any).autoTable({
         startY: 34,
         body: [[`Month-Year: ${monthName} ${year}`, `UDISE Code: ${schoolDetails.udise}`, `School Name: ${schoolDetails.name}`]],
         theme: 'grid',
@@ -105,7 +97,7 @@ const generateMDCF = (data: AppData, selectedMonth: string, overrideData?: MdcfO
     drawCheckbox(doc, 110, 60, 'Primary with Upper Primary', schoolDetails.schoolCategoryMDCF === 'Primary with Upper Primary');
 
     // Location Details
-    doc.autoTable({ 
+    (doc as any).autoTable({ 
         startY: 65, 
         body: [
             [`State / UT: ${schoolDetails.state}`, `District: ${schoolDetails.district}`, `Block/NP: ${schoolDetails.block}`, `Village/Ward: ${schoolDetails.village}`],
@@ -122,9 +114,9 @@ const generateMDCF = (data: AppData, selectedMonth: string, overrideData?: MdcfO
         middle: monthEntries.filter(e => e.present.middle > 0).length,
     };
     doc.setFontSize(10).setFont(undefined, 'bold');
-    doc.text('2. Meals Availed Status', 14, doc.lastAutoTable.finalY + 6);
-    doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 8,
+    doc.text('2. Meals Availed Status', 14, (doc as any).lastAutoTable.finalY + 6);
+    (doc as any).autoTable({
+        startY: (doc as any).lastAutoTable.finalY + 8,
         head: [['', 'Bal Vatika', 'Primary', 'Upper Primary']],
         body: [
             ['Number of School days during month', monthEntries.length, monthEntries.length, monthEntries.length],
@@ -137,9 +129,9 @@ const generateMDCF = (data: AppData, selectedMonth: string, overrideData?: MdcfO
     
     // ======== 3. Fund Details (in Rs.) ========
     doc.setFontSize(10).setFont(undefined, 'bold');
-    doc.text('3. Fund Details (in Rs.)', 14, doc.lastAutoTable.finalY + 6);
-    doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 8,
+    doc.text('3. Fund Details (in Rs.)', 14, (doc as any).lastAutoTable.finalY + 6);
+    (doc as any).autoTable({
+        startY: (doc as any).lastAutoTable.finalY + 8,
         head: [['Component', 'Opening Balance', 'Received', 'Expenditure', 'Closing Balance']],
         body: [
             ['Cooking Cost - Bal Vatika', cashAbstracts.balvatika.opening.toFixed(2), cashAbstracts.balvatika.received.toFixed(2), cashAbstracts.balvatika.expenditure.toFixed(2), cashAbstracts.balvatika.balance.toFixed(2)],
@@ -151,9 +143,9 @@ const generateMDCF = (data: AppData, selectedMonth: string, overrideData?: MdcfO
 
     // ======== 4. Cook Cum Helper Payment Details ========
     doc.setFontSize(10).setFont(undefined, 'bold');
-    doc.text('4. Cook Cum Helper Payment Details', 14, doc.lastAutoTable.finalY + 6);
-    doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 8,
+    doc.text('4. Cook Cum Helper Payment Details', 14, (doc as any).lastAutoTable.finalY + 6);
+    (doc as any).autoTable({
+        startY: (doc as any).lastAutoTable.finalY + 8,
         head: [['S.No', 'Name', 'Gender', 'Category', 'Mode of Payment', 'Amount Paid (Rs.)']],
         body: settings.cooks.map((cook, index) => [
             index + 1,
@@ -168,9 +160,9 @@ const generateMDCF = (data: AppData, selectedMonth: string, overrideData?: MdcfO
 
     // ======== 5. Food Grains Details (in Kgs) ========
     doc.setFontSize(10).setFont(undefined, 'bold');
-    doc.text('5. Food Grains Details (in Kgs)', 14, doc.lastAutoTable.finalY + 6);
-    doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 8,
+    doc.text('5. Food Grains Details (in Kgs)', 14, (doc as any).lastAutoTable.finalY + 6);
+    (doc as any).autoTable({
+        startY: (doc as any).lastAutoTable.finalY + 8,
         head: [['Component', 'Opening Balance', 'Received', 'Utilized', 'Closing Balance']],
         body: [
             ['Rice - Bal Vatika', riceAbstracts.balvatika.opening.toFixed(3), riceAbstracts.balvatika.received.toFixed(3), riceAbstracts.balvatika.consumed.toFixed(3), riceAbstracts.balvatika.balance.toFixed(3)],
@@ -182,9 +174,9 @@ const generateMDCF = (data: AppData, selectedMonth: string, overrideData?: MdcfO
 
     // ======== 6. Other Details ========
     doc.setFontSize(10).setFont(undefined, 'bold');
-    doc.text('6. Other Details', 14, doc.lastAutoTable.finalY + 6);
-    doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 8,
+    doc.text('6. Other Details', 14, (doc as any).lastAutoTable.finalY + 6);
+    (doc as any).autoTable({
+        startY: (doc as any).lastAutoTable.finalY + 8,
         body: [
             ['No. of Children given IFA Tablets (Boys)', settings.healthStatus.ifaBoys],
             ['No. of Children given IFA Tablets (Girls)', settings.healthStatus.ifaGirls],
@@ -198,13 +190,13 @@ const generateMDCF = (data: AppData, selectedMonth: string, overrideData?: MdcfO
         theme: 'grid', styles: { fontSize: 8, cellPadding: 1.5 },
     });
 
-    addSignatureBlock(doc, settings, doc.lastAutoTable.finalY);
+    addSignatureBlock(doc, settings, (doc as any).lastAutoTable.finalY);
 
     return doc.output('blob');
 };
 
 const generateRollStatementPDF = (data: AppData, selectedMonth: string): Blob => {
-    const doc = new jspdf.jsPDF();
+    const doc = new jsPDF();
     const { settings } = data;
     const { schoolDetails } = settings;
 
@@ -283,7 +275,7 @@ const generateRollStatementPDF = (data: AppData, selectedMonth: string): Blob =>
 
     const foot = [['Grand Total', grandTotal.genB, grandTotal.genG, grandTotal.stscB, grandTotal.stscG, grandTotal.totalB, grandTotal.totalG, grandTotal.onRoll]];
 
-    doc.autoTable({
+    (doc as any).autoTable({
         startY: 30,
         head: head,
         body: body,
@@ -292,13 +284,13 @@ const generateRollStatementPDF = (data: AppData, selectedMonth: string): Blob =>
         headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0] }, footStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0] },
     });
 
-    addSignatureBlock(doc, settings, doc.lastAutoTable.finalY);
+    addSignatureBlock(doc, settings, (doc as any).lastAutoTable.finalY);
 
     return doc.output('blob');
 };
 
 const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob => {
-    const doc = new jspdf.jsPDF();
+    const doc = new jsPDF();
     const { settings } = data;
     const { schoolDetails } = settings;
     const summaryData = calculateMonthlySummary(data, selectedMonth);
@@ -387,7 +379,7 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
 
         const foot = [[ 'Total', '', '', totals.present, totals.riceUsed.toFixed(3), totals.dalVeg.toFixed(2), totals.oilCond.toFixed(2), totals.salt.toFixed(2), totals.fuel.toFixed(2), totals.totalCost.toFixed(2), '' ]];
 
-        doc.autoTable({
+        (doc as any).autoTable({
             startY: 22,
             head: head,
             body: body,
@@ -398,7 +390,7 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
             footStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0] },
         });
 
-        const mainTableFinalY = doc.lastAutoTable.finalY;
+        const mainTableFinalY = (doc as any).lastAutoTable.finalY;
         let abstractStartY = mainTableFinalY + 5;
         
         if (abstractStartY > doc.internal.pageSize.getHeight() - 60) {
@@ -415,7 +407,7 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
         const tableWidth = (pageWidth - (margin * 2) - gap) / 2;
 
         // Rice Abstract Table (Left)
-        doc.autoTable({
+        (doc as any).autoTable({
             startY: abstractStartY,
             head: [['Rice Abstract (kg)', 'Amount']],
             body: [
@@ -433,10 +425,10 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
             columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
         });
 
-        const riceTableFinalY = doc.lastAutoTable.finalY;
+        const riceTableFinalY = (doc as any).lastAutoTable.finalY;
 
         // Cash Abstract Table (Right)
-        doc.autoTable({
+        (doc as any).autoTable({
             startY: abstractStartY,
             head: [['Cash Abstract (Rs)', 'Amount']],
             body: [
@@ -454,7 +446,7 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
             columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
         });
         
-        const cashTableFinalY = doc.lastAutoTable.finalY;
+        const cashTableFinalY = (doc as any).lastAutoTable.finalY;
         const abstractTablesFinalY = Math.max(riceTableFinalY, cashTableFinalY);
         addSignatureBlock(doc, settings, abstractTablesFinalY);
     });
@@ -463,7 +455,7 @@ const generateDailyConsumptionPDF = (data: AppData, selectedMonth: string): Blob
 };
 
 const generateRiceRequirementPDF = (data: AppData, selectedMonth: string): Blob => {
-    const doc = new jspdf.jsPDF();
+    const doc = new jsPDF();
     const { settings } = data;
     const { schoolDetails } = settings;
     const summary = calculateMonthlySummary(data, selectedMonth);
@@ -502,7 +494,7 @@ const generateRiceRequirementPDF = (data: AppData, selectedMonth: string): Blob 
     const bodyText = `Certified that the total enrollment of students in this school is ${enrollment} for the month of ${monthName}, ${year}. The school remained open for ${workingDays} days during the month. The requirement of rice for the month of ${monthName}, ${year} under PM POSHAN is as under:`;
     doc.text(bodyText, 14, 45, { maxWidth: 180, align: 'justify' });
 
-    doc.autoTable({
+    (doc as any).autoTable({
         startY: 80,
         head: [['Category', 'Enrollment', 'Working Days', 'Rate (g/day)', 'Total Rice (kg)']],
         body: [
@@ -514,12 +506,12 @@ const generateRiceRequirementPDF = (data: AppData, selectedMonth: string): Blob 
         theme: 'grid',
     });
 
-    addSignatureBlock(doc, settings, doc.lastAutoTable.finalY + 20);
+    addSignatureBlock(doc, settings, (doc as any).lastAutoTable.finalY + 20);
     return doc.output('blob');
 };
 
 const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: string): Blob => {
-    const doc = new jspdf.jsPDF('l', 'mm', 'a4'); // Landscape
+    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
     const { settings } = data;
     const { schoolDetails } = settings;
     const categories: Category[] = ['balvatika', 'primary', 'middle'];
@@ -654,7 +646,7 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
         yearlyClosingCash.toFixed(2),
     ]];
 
-    doc.autoTable({
+    (doc as any).autoTable({
         startY: 30,
         head: head,
         body: body,
@@ -670,7 +662,7 @@ const generateYearlyConsumptionDetailedPDF = (data: AppData, financialYear: stri
         showFoot: 'lastPage',
     });
     
-    addSignatureBlock(doc, settings, doc.lastAutoTable.finalY);
+    addSignatureBlock(doc, settings, (doc as any).lastAutoTable.finalY);
 
     return doc.output('blob');
 };
