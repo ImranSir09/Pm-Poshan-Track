@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -17,6 +16,7 @@ const reportDescriptions: Record<string, string> = {
     roll_statement: "Creates a summary of student enrollment numbers by class and social category for the selected month.",
     daily_consumption: "Produces a detailed, register-style log of daily meals, attendance, and expenditure for the selected month.",
     rice_requirement: "Generates a formal certificate for the monthly rice requirement based on enrollment and working days.",
+    yearly_consumption_detailed: "A comprehensive yearly report with category-wise monthly breakdowns of consumption, stock, and funds.",
 };
 
 
@@ -34,6 +34,19 @@ const Reports: React.FC = () => {
         return `${year}-${month}`;
     });
     
+    const financialYearOptions = useMemo(() => {
+        const currentMonth = new Date().getMonth(); // 0-11
+        const currentYear = new Date().getFullYear();
+        const endYear = currentMonth < 3 ? currentYear : currentYear + 1;
+        const options: string[] = [];
+        for (let i = 0; i < 5; i++) {
+            const year = endYear - i;
+            options.push(`${year - 1}-${year}`);
+        }
+        return options;
+    }, []);
+    const [selectedFinancialYear, setSelectedFinancialYear] = useState(financialYearOptions[0]);
+
     const [isGenerating, setIsGenerating] = useState(false);
     
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -63,7 +76,7 @@ const Reports: React.FC = () => {
 
         switch (reportType) {
             case 'daily_consumption':
-                 newSummary = { 'Report': 'Daily Consumption Register', 'For Month': monthName, 'Total Meal Days': monthEntries.filter(e => e.totalPresent > 0).length, 'Rice Consumed': `${totals.rice.toFixed(3)} kg`, 'Total Expenditure': `₹${totals.expenditure.toFixed(2)}` };
+                 newSummary = { 'Report': 'Daily Consumption Register', 'For Month': monthName, 'Total Meal Days': monthEntries.filter(e => e.totalPresent > 0).length, 'Rice Consumed': `${totals.riceConsumed.toFixed(3)} kg` };
                 break;
             case 'roll_statement':
                 const rollsForMonth = getRollsForMonth(data, selectedMonth);
@@ -86,6 +99,9 @@ const Reports: React.FC = () => {
                  }, 0);
                 newSummary = { 'Report': 'Rice Requirement Certificate', 'For Month': monthName, 'Total Enrollment': enrollment, 'Working Days': workingDays, 'Total Rice Required': `${totalRiceKg.toFixed(3)} kg` };
                 break;
+            case 'yearly_consumption_detailed':
+                newSummary = { 'Report': 'Detailed Yearly Consumption Report', 'For Financial Year': selectedFinancialYear, 'Note': 'This report shows category-wise details for each month and may take time to generate.' };
+                break;
         }
 
         setReportSummary(newSummary);
@@ -97,7 +113,8 @@ const Reports: React.FC = () => {
         // Use a short timeout to allow the UI to update to the "Generating..." state
         setTimeout(() => {
             try {
-                const { pdfBlob, filename } = generatePDFReport(reportType, data, selectedMonth, overrideData);
+                const parameter = ['yearly_consumption_detailed'].includes(reportType) ? selectedFinancialYear : selectedMonth;
+                const { pdfBlob, filename } = generatePDFReport(reportType, data, parameter, overrideData);
 
                 // Create a URL for the blob and trigger download
                 const downloadUrl = URL.createObjectURL(pdfBlob);
@@ -129,6 +146,9 @@ const Reports: React.FC = () => {
     const handleMdcfCookChange = (id: string, field: keyof CookCumHelper, value: string | number) => {
         setMdcfData(prev => prev ? ({ ...prev, cooks: prev.cooks?.map(cook => cook.id === id ? { ...cook, [field]: value } : cook) }) : null);
     };
+
+    const needsMonth = !['yearly_consumption_detailed'].includes(reportType);
+    const needsYear = ['yearly_consumption_detailed'].includes(reportType);
 
     return (
         <>
@@ -165,18 +185,18 @@ const Reports: React.FC = () => {
                 </div>
             </Modal>
             
-            <Modal isOpen={isMdcfModalOpen} onClose={() => setIsMdcfModalOpen(false)} title={`Details for MDCF Report - ${new Date(selectedMonth + '-02').toLocaleString('default', { month: 'long', year: 'numeric' })}`}>
+            <Modal isOpen={isMdcfModalOpen} onClose={() => setIsMdcfModalOpen(false)} title={`Details for MDCF Report - ${new Date(selectedMonth + '-02').toLocaleString('default', { month: 'long', year: 'numeric' })}`}> 
                 <div className="space-y-4">
-                    <p className="text-sm text-stone-600 dark:text-gray-300 -mt-2">Confirm or edit the details for the selected month before generating the report. These changes are temporary and will not affect your main settings.</p>
+                    <p className="text-sm text-stone-600 dark:text-gray-300 -mt-2">Confirm or edit the details for the selected month before generating the report. These changes are temporary and will only affect the generated PDF.</p>
                     <div className="max-h-[60vh] overflow-y-auto pr-2">
                         {mdcfData && (
                             <Accordion defaultOpenId='health'>
                                 <AccordionItem id="health" title="Health Status">
                                     <div className="grid grid-cols-2 gap-3">
-                                        <NumberInput label="IFA Tablets (Boys)" id="m-ifa-boys" min={0} value={mdcfData.healthStatus?.ifaBoys || 0} onChange={v => handleMdcfChange('healthStatus', 'ifaBoys', v)} />
-                                        <NumberInput label="IFA Tablets (Girls)" id="m-ifa-girls" min={0} value={mdcfData.healthStatus?.ifaGirls || 0} onChange={v => handleMdcfChange('healthStatus', 'ifaGirls', v)} />
-                                        <NumberInput label="Screened by RBSK" id="m-screened-rbsk" min={0} value={mdcfData.healthStatus?.screenedByRBSK || 0} onChange={v => handleMdcfChange('healthStatus', 'screenedByRBSK', v)} />
-                                        <NumberInput label="Referred by RBSK" id="m-referred-rbsk" min={0} value={mdcfData.healthStatus?.referredByRBSK || 0} onChange={v => handleMdcfChange('healthStatus', 'referredByRBSK', v)} />
+                                        <NumberInput label="IFA Tablets (Boys)" id="m-ifa-boys" min={0} value={mdcfData.healthStatus?.ifaBoys || 0} onChange={v => handleMdcfChange('healthStatus','ifaBoys', v)} />
+                                        <NumberInput label="IFA Tablets (Girls)" id="m-ifa-girls" min={0} value={mdcfData.healthStatus?.ifaGirls || 0} onChange={v => handleMdcfChange('healthStatus','ifaGirls', v)} />
+                                        <NumberInput label="Screened by RBSK" id="m-screened-rbsk" min={0} value={mdcfData.healthStatus?.screenedByRBSK || 0} onChange={v => handleMdcfChange('healthStatus','screenedByRBSK', v)} />
+                                        <NumberInput label="Referred by RBSK" id="m-referred-rbsk" min={0} value={mdcfData.healthStatus?.referredByRBSK || 0} onChange={v => handleMdcfChange('healthStatus','referredByRBSK', v)} />
                                     </div>
                                 </AccordionItem>
                                 <AccordionItem id="inspection" title="Inspection Report">
@@ -184,14 +204,14 @@ const Reports: React.FC = () => {
                                         <div className="flex items-center justify-between p-3 bg-amber-100/50 dark:bg-gray-800/50 rounded-lg">
                                             <label htmlFor="m-inspected" className="font-medium text-stone-700 dark:text-gray-300 text-sm">Was an inspection done?</label>
                                             <label className="relative inline-flex items-center cursor-pointer">
-                                                <input type="checkbox" id="m-inspected" className="sr-only peer" checked={mdcfData.inspectionReport?.inspected} onChange={e => handleMdcfChange('inspectionReport', 'inspected', e.target.checked)} />
-                                                <div className="w-11 h-6 bg-stone-200 dark:bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-amber-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                                                <input type="checkbox" id="m-inspected" className="sr-only peer" checked={mdcfData.inspectionReport?.inspected} onChange={e => handleMdcfChange('inspectionReport','inspected', e.target.checked)} />
+                                                <div className="w-11 h-6 bg-stone-200 dark:bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-amber-500 peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                                             </label>
                                         </div>
                                         {mdcfData.inspectionReport?.inspected && (
                                             <div>
                                                 <label htmlFor="m-inspected-by" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Inspected by:</label>
-                                                <select id="m-inspected-by" value={mdcfData.inspectionReport.inspectedBy} onChange={e => handleMdcfChange('inspectionReport', 'inspectedBy', e.target.value as InspectionAuthority)} className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg p-2.5 focus:ring-amber-500 focus:border-amber-500">
+                                                <select id="m-inspected-by" value={mdcfData.inspectionReport.inspectedBy} onChange={e => handleMdcfChange('inspectionReport', 'inspectedBy', e.target.value)}>
                                                     <option value="">Select Inspector</option>
                                                     <option value="Task Force">Task Force</option>
                                                     <option value="District Officials">District Officials</option>
@@ -200,7 +220,7 @@ const Reports: React.FC = () => {
                                                 </select>
                                             </div>
                                         )}
-                                        <NumberInput label="Untoward Incidents" id="m-incidents" min={0} value={mdcfData.inspectionReport?.incidentsCount || 0} onChange={v => handleMdcfChange('inspectionReport', 'incidentsCount', v)} />
+                                        <NumberInput label="Untoward Incidents" id="m-incidents" min={0} value={mdcfData.inspectionReport?.incidentsCount || 0} onChange={v => handleMdcfChange('inspectionReport','incidentsCount', v)} />
                                     </div>
                                 </AccordionItem>
                                 <AccordionItem id="cooks" title="Cook-Cum-Helper Details">
@@ -215,7 +235,7 @@ const Reports: React.FC = () => {
                                     </div>
                                 </AccordionItem>
                                 <AccordionItem id="mme" title="MME Expenditure">
-                                    <NumberInput label="MME Expenditure this month (₹)" id="m-mme-expenditure" min={0} value={mdcfData.mmeExpenditure || 0} onChange={v => setMdcfData(p => p ? {...p, mmeExpenditure: v} : null)} />
+                                    <NumberInput label="MME Expenditure this month (₹)" id="m-mme-expenditure" min={0} value={mdcfData.mmeExpenditure || 0} onChange={v => setMdcfData(p => p ? ({ ...(p as any), mmeExpenditure: v }) : null)} />
                                 </AccordionItem>
                             </Accordion>
                         )}
@@ -236,15 +256,17 @@ const Reports: React.FC = () => {
                                 id="report-type" 
                                 value={reportType} 
                                 onChange={e => setReportType(e.target.value)} 
-                                className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5"
+                                className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500"
                             >
                                 <option value="mdcf">Monthly Data Collection Format (MDCF)</option>
                                 <option value="roll_statement">Roll Statement</option>
                                 <option value="daily_consumption">Daily Consumption Register</option>
                                 <option value="rice_requirement">Rice Requirement Certificate</option>
+                                <option value="yearly_consumption_detailed">Yearly Consumption Report (Detailed)</option>
                             </select>
                             <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">{reportDescriptions[reportType]}</p>
                         </div>
+                        {needsMonth && (
                         <div>
                             <label htmlFor="month-select" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Select Month</label>
                             <input
@@ -255,6 +277,22 @@ const Reports: React.FC = () => {
                                 className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg p-2.5 focus:ring-amber-500 focus:border-amber-500"
                             />
                         </div>
+                        )}
+                        {needsYear && (
+                            <div>
+                               <label htmlFor="year-select" className="block text-xs font-medium text-stone-600 dark:text-gray-300 mb-1">Select Financial Year</label>
+                               <select
+                                   id="year-select"
+                                   value={selectedFinancialYear}
+                                   onChange={(e) => setSelectedFinancialYear(e.target.value)}
+                                   className="w-full bg-amber-100/60 dark:bg-gray-700/50 border border-amber-300/50 dark:border-gray-600 text-stone-800 dark:text-white text-sm rounded-lg p-2.5 focus:ring-amber-500 focus:border-amber-500"
+                               >
+                                   {financialYearOptions.map(year => (
+                                       <option key={year} value={year}>{year}</option>
+                                   ))}
+                               </select>
+                           </div>
+                        )}
                         <Button onClick={initiateReportGeneration} className="w-full" disabled={isGenerating}>
                             Generate PDF
                         </Button>
